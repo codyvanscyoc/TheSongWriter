@@ -320,6 +320,7 @@ async function saveSong(manual = false) {
         updatePresentation();
         const pdfContent = document.getElementById('presentation-content').innerHTML;
         dataChannel.send(JSON.stringify({ type: 'pdfUpdate', content: pdfContent }));
+        document.getElementById('shareStatus').textContent = 'Sharing active';
     }
 }
 
@@ -496,6 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isHost = true;
             viewCode = Math.random().toString(36).substring(2, 8).toUpperCase();
             alert(`Share this code with viewers: ${viewCode}`);
+            document.getElementById('shareStatus').textContent = 'Connecting...';
             setupHostWebRTC(viewCode);
         } else {
             alert(`Already sharing with code: ${viewCode}`);
@@ -505,6 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('joinView').addEventListener('change', (e) => {
         const code = e.target.value.trim().toUpperCase();
         if (code) {
+            document.getElementById('joinStatus').textContent = 'Connecting...';
             setupViewerWebRTC(code);
         }
     });
@@ -787,40 +790,49 @@ function loadFormatOptions() {
 }
 
 function setupHostWebRTC(code) {
-    signalingSocket = new WebSocket('wss://signaling.herokuapp.com'); // Replace with a working signaling server if needed
+    signalingSocket = new WebSocket('wss://simple-signaling.glitch.me');
     peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
     dataChannel = peerConnection.createDataChannel('pdfChannel');
 
-    dataChannel.onopen = () => console.log('Data channel open');
+    dataChannel.onopen = () => {
+        console.log('Data channel open');
+        document.getElementById('shareStatus').textContent = 'Connected - Sharing active';
+    };
     dataChannel.onmessage = (event) => console.log('Message from viewer:', event.data);
-    dataChannel.onclose = () => console.log('Data channel closed');
+    dataChannel.onclose = () => {
+        console.log('Data channel closed');
+        document.getElementById('shareStatus').textContent = 'Disconnected';
+    };
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, code }));
+            signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
         }
     };
 
     signalingSocket.onopen = () => {
         peerConnection.createOffer()
             .then(offer => peerConnection.setLocalDescription(offer))
-            .then(() => signalingSocket.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription, code })));
+            .then(() => signalingSocket.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription, room: code })))
+            .catch(err => console.error('Error creating offer:', err));
     };
 
     signalingSocket.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'answer' && msg.code === code) {
-            peerConnection.setRemoteDescription(new RTCSessionDescription(msg.answer));
-        } else if (msg.type === 'candidate' && msg.code === code) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        if (msg.type === 'answer' && msg.room === code) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(msg.answer))
+                .catch(err => console.error('Error setting remote description:', err));
+        } else if (msg.type === 'candidate' && msg.room === code) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate))
+                .catch(err => console.error('Error adding ICE candidate:', err));
         }
     };
 }
 
 function setupViewerWebRTC(code) {
-    signalingSocket = new WebSocket('wss://signaling.herokuapp.com'); // Replace with a working signaling server if needed
+    signalingSocket = new WebSocket('wss://simple-signaling.glitch.me');
     peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
@@ -837,27 +849,36 @@ function setupViewerWebRTC(code) {
                 document.getElementById('addSection').style.display = 'none';
                 document.querySelector('.full-song').style.display = 'none';
                 document.getElementById('saveSong').style.display = 'none';
+                document.getElementById('joinStatus').textContent = 'Connected - Viewing';
             }
         };
-        dataChannel.onopen = () => console.log('Viewer data channel open');
-        dataChannel.onclose = () => console.log('Viewer data channel closed');
+        dataChannel.onopen = () => {
+            console.log('Viewer data channel open');
+            document.getElementById('joinStatus').textContent = 'Connected';
+        };
+        dataChannel.onclose = () => {
+            console.log('Viewer data channel closed');
+            document.getElementById('joinStatus').textContent = 'Disconnected';
+        };
     };
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, code }));
+            signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
         }
     };
 
     signalingSocket.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        if (msg.type === 'offer' && msg.code === code) {
+        if (msg.type === 'offer' && msg.room === code) {
             peerConnection.setRemoteDescription(new RTCSessionDescription(msg.offer))
                 .then(() => peerConnection.createAnswer())
                 .then(answer => peerConnection.setLocalDescription(answer))
-                .then(() => signalingSocket.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription, code })));
-        } else if (msg.type === 'candidate' && msg.code === code) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+                .then(() => signalingSocket.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription, room: code })))
+                .catch(err => console.error('Error handling offer:', err));
+        } else if (msg.type === 'candidate' && msg.room === code) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate))
+                .catch(err => console.error('Error adding ICE candidate:', err));
         }
     };
 }
