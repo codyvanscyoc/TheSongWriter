@@ -39,6 +39,7 @@ h1 {
 
 h2 {
     color: inherit;
+    margin: 0 0 10px;
 }
 
 .title-row {
@@ -82,13 +83,13 @@ body.dark-mode #songTitle, body.dark-mode #songAuthors {
 }
 
 .toggle-button {
-    width: 140px; /* Adjusted width for text */
+    width: 140px;
     height: 20px;
     border-radius: 4px;
     font-size: 0.8em;
     cursor: pointer;
     margin: 2px;
-    transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    transition: background-color 0.2s, box-shadow 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -96,7 +97,7 @@ body.dark-mode #songTitle, body.dark-mode #songAuthors {
     border: 2px solid #95a5a6;
     background: #fff;
     color: #333;
-    padding: 0 8px; /* Add padding for better text fit */
+    padding: 0 8px;
 }
 
 body.dark-mode .toggle-button {
@@ -124,7 +125,7 @@ body.dark-mode .toggle-button {
     font-size: 0.8em;
     cursor: pointer;
     margin: 2px;
-    transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    transition: background-color 0.2s, box-shadow 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -198,7 +199,7 @@ body.dark-mode .format-button.font[data-selected="false"] {
     color: inherit;
 }
 
-#originalKey, #transposeKey, #fontSize {
+#fontSize {
     padding: 4px;
     border: 2px solid #dcdcdc;
     border-radius: 4px;
@@ -209,7 +210,7 @@ body.dark-mode .format-button.font[data-selected="false"] {
     font-size: 0.9em;
 }
 
-body.dark-mode #originalKey, body.dark-mode #transposeKey, body.dark-mode #fontSize {
+body.dark-mode #fontSize {
     border-color: #555;
     background: #3c3c3c;
 }
@@ -220,10 +221,84 @@ body.dark-mode #originalKey, body.dark-mode #transposeKey, body.dark-mode #fontS
     position: relative;
 }
 
+#songList {
+    width: 25%; /* Full width when open */
+    transition: width 0.3s ease;
+    overflow-y: auto;
+    display: flex;
+}
+
+#songList.closed {
+    width: 40px; /* Just the toggle button when closed */
+}
+
+.song-list-toggle-container {
+    width: 40px; /* Fixed width for toggle button */
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.song-list-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+#songList.closed .song-list-content {
+    width: 0;
+    opacity: 0;
+}
+
+#toggleSongList {
+    width: 30px;
+    height: 30px;
+    padding: 8px;
+    border-radius: 6px;
+    background-color: #95a5a6;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.3s ease, background-color 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+#toggleSongList:hover {
+    background-color: #7f8c8d;
+}
+
+#toggleSongList.open {
+    transform: rotate(90deg);
+}
+
+#toggleSongList span {
+    width: 20px;
+    height: 2px;
+    background-color: white;
+    border-radius: 2px;
+}
+
+body.dark-mode #toggleSongList {
+    background-color: #b0bec5;
+}
+
+body.dark-mode #toggleSongList:hover {
+    background-color: #90a4ae;
+}
+
+#editor {
+    flex: 3; /* 75% when song list is open */
+    display: flex;
+    gap: 20px;
+    transition: flex 0.3s ease;
+}
+
 .chords-advisory {
     color: #7f8c8d;
     font-size: 0.9em;
-    margin-bottom: 5px; /* Tight spacing above editing area */
+    margin-bottom: 5px;
 }
 
 body.dark-mode .chords-advisory {
@@ -231,9 +306,8 @@ body.dark-mode .chords-advisory {
 }
 
 #sections {
-    flex: 1; /* 50% when panel is visible */
-    display: block;
-    transition: flex 0.3s ease;
+    flex: 1;
+    contain: content;
 }
 
 #togglePresentation {
@@ -274,17 +348,9 @@ textarea.lyrics-chords {
     height: 120px;
     resize: vertical;
     background: inherit;
-    font-family: Helvetica, sans-serif; /* Default to Sans (Helvetica) */
+    font-family: Helvetica, sans-serif;
     white-space: pre-wrap;
-}
-
-/* Shade odd-numbered (chord) lines in editing area with CSS */
-textarea.lyrics-chords::-webkit-scrollbar-track:vertical:nth-child(odd) {
-    background-color: #f5f5f5;
-}
-
-body.dark-mode textarea.lyrics-chords::-webkit-scrollbar-track:vertical:nth-child(odd) {
-    background-color: #555;
+    font-size: 1em;
 }
 
 .audio-controls {
@@ -292,6 +358,7 @@ body.dark-mode textarea.lyrics-chords::-webkit-scrollbar-track:vertical:nth-chil
     align-items: center;
     gap: 10px;
     margin-top: 8px;
+    contain: layout;
 }
 
 .audio-select, #full-audio-select {
@@ -364,7 +431,7 @@ body.dark-mode .section {
     display: flex;
     gap: 5px;
     margin-top: 8px;
-    align-items: center; /* Align items vertically */
+    align-items: center;
 }
 
 .move-up, .move-down {
@@ -378,12 +445,8 @@ body.dark-mode .section {
 }
 
 .full-song {
-    max-width: 50%; /* Match title area width */
+    max-width: 50%;
     margin-top: 20px;
-}
-
-#songList {
-    margin-bottom: 20px;
 }
 
 #songItems {
@@ -425,14 +488,6 @@ body.dark-mode #songItems li:hover {
     background-color: #27ae60;
 }
 
-#backToList {
-    background-color: #34495e;
-}
-
-#backToList:hover {
-    background-color: #2c3e50;
-}
-
 #pickFolder {
     margin-bottom: 10px;
     background-color: #ab47bc;
@@ -467,11 +522,12 @@ body.dark-mode .mode-toggle:hover {
 }
 
 .presentation-panel {
-    flex: 1; /* 50% when visible */
+    flex: 1;
     background: #fafafa;
     padding: 15px;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    contain: content;
 }
 
 body.dark-mode .presentation-panel {
@@ -519,7 +575,7 @@ body.dark-mode #presentation-content h3 {
 }
 
 #presentation-content .chord.bold {
-    font-weight: bold !important; /* Increased specificity */
+    font-weight: bold !important;
 }
 
 #presentation-content .lyric-line {

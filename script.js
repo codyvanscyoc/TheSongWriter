@@ -5,8 +5,8 @@ let lastSavedData = null;
 let currentSongKey = null;
 let formatOptions = {
     boldChords: false,
-    font: 'Sans', // Default to Sans (maps to Helvetica)
-    transposeSteps: 0, // Tracks half-step transposition
+    font: 'Sans',
+    transposeSteps: 0,
     columns: 'single',
     fontSize: 'normal',
     lyricsOnlyPdf: false
@@ -64,43 +64,38 @@ function formatTimestamp(isoString) {
 }
 
 function transposeChord(chord, steps) {
-    if (!chord.match(/^[A-G](#|b)?[0-9m7dim]*$/i)) return chord; // Skip numbers and non-chord formats
+    if (!chord.match(/^[A-G](#|b)?[0-9m7dim]*$/i)) return chord;
     const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const rootMatch = chord.match(/^[A-G](#|b)?/i);
     if (!rootMatch) return chord;
     const root = rootMatch[0].toUpperCase();
-    const extension = chord.replace(root, '').toLowerCase() || ''; // e.g., "7", "m", "dim"
+    const extension = chord.replace(root, '').toLowerCase() || '';
 
     const rootIndex = keys.indexOf(root);
     if (rootIndex === -1) return chord;
 
-    // Shift by steps, handle wrapping (modulo 12), limit to ±12
-    let newSteps = steps;
-    if (newSteps > 12) newSteps = 12;
-    if (newSteps < -12) newSteps = -12;
-    const newIndex = (rootIndex + newSteps + 12) % 12; // +12 ensures positive modulo for negative steps
+    let newSteps = Math.min(Math.max(steps, -12), 12);
+    const newIndex = (rootIndex + newSteps + 12) % 12;
     const newRoot = keys[newIndex];
 
     return `${newRoot}${extension}`;
 }
 
 function parseChordsAndLyrics(text, options = formatOptions, recognizeChords = true) {
-    console.log('Parsing text:', text, 'Options:', options, 'Recognize Chords:', recognizeChords); // Debug
     const lines = text.split('\n');
     let output = '';
 
     lines.forEach((line, index) => {
-        const lineNumber = index + 1; // 1-based for user reference
-        if (recognizeChords && lineNumber % 2 === 1) { // Odd-numbered lines are chords if recognition is on
+        const lineNumber = index + 1;
+        if (recognizeChords && lineNumber % 2 === 1) {
             const chords = line.split(' ').map(chord => {
-                console.log('Chord or Number:', chord, 'Is Chord:', /^[A-G](#|b)?[0-9m7dim]*$/i.test(chord)); // Debug
-                const transposed = options.transposeSteps !== 0 && chord.match(/^[A-G](#|b)?[0-9m7dim]*$/i) 
-                    ? transposeChord(chord, options.transposeSteps) 
+                const transposed = options.transposeSteps !== 0 && chord.match(/^[A-G](#|b)?[0-9m7dim]*$/i)
+                    ? transposeChord(chord, options.transposeSteps)
                     : chord;
                 return `<span class="chord${options.boldChords ? ' bold' : ''}" style="font-family: ${options.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif'}; font-size: ${options.fontSize === 'larger' ? '1.2em' : options.fontSize === 'smaller' ? '0.8em' : '1em'}; white-space: pre-wrap;">${transposed}</span>`;
             }).join(' ');
             output += `<div class="chord-line">${chords}</div>`;
-        } else { // Even-numbered lines or no chord recognition are lyrics
+        } else {
             output += `<div class="lyric-line" style="font-family: ${options.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif'}; font-size: ${options.fontSize === 'larger' ? '1.2em' : options.fontSize === 'smaller' ? '0.8em' : '1em'}; white-space: pre-wrap;">${line}</div>`;
         }
     });
@@ -111,6 +106,10 @@ function parseChordsAndLyrics(text, options = formatOptions, recognizeChords = t
 function setupRecording(button, audioSelect, audioElement, baseKey, deleteBtn) {
     button.addEventListener('click', async () => {
         if (button.textContent.includes('Record')) {
+            if (audioSelect.options.length >= 5) {
+                alert('Max 5 recordings per section. Delete one to record again.');
+                return;
+            }
             audioChunks = [];
             mediaRecorder.start();
             button.textContent = 'Stop';
@@ -205,7 +204,7 @@ function setupMoveButtons(section) {
         const isActive = chordToggle.dataset.active === 'true';
         chordToggle.dataset.active = !isActive;
         chordToggle.classList.toggle('active', !isActive);
-        updatePresentation(); // Re-render presentation when chord recognition toggles
+        debouncedUpdatePresentation();
     });
 }
 
@@ -275,9 +274,7 @@ async function saveSong(manual = false) {
     formatOptions.transposeSteps = parseInt(document.getElementById('transpose-indicator').textContent) || 0;
     formatOptions.columns = document.querySelector('.format-button.columns[data-selected="true"]').dataset.value;
     formatOptions.fontSize = document.getElementById('fontSize').value;
-    formatOptions.lyricsOnlyPdf = false; // Removed for now, can be re-added if needed
 
-    // Apply font to editing area
     document.querySelectorAll('.lyrics-chords').forEach(textarea => {
         textarea.style.fontFamily = formatOptions.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif';
     });
@@ -287,9 +284,9 @@ async function saveSong(manual = false) {
         authors: document.getElementById('songAuthors').value,
         sections: Array.from(document.querySelectorAll('.section')).map((section, index) => ({
             title: section.querySelector('.section-title').value,
-            text: section.querySelector('.lyrics-chords').value, // Save plain text, no HTML
+            text: section.querySelector('.lyrics-chords').value,
             audioKeys: Array.from(section.querySelector('.audio-select').options).map(opt => opt.value),
-            recognizeChords: section.querySelector('.chord-recognition-toggle').dataset.active === 'true' // Save chord recognition state
+            recognizeChords: section.querySelector('.chord-recognition-toggle').dataset.active === 'true'
         })),
         fullSongAudioKeys: Array.from(document.getElementById('full-audio-select').options).map(opt => opt.value),
         formatOptions: { ...formatOptions }
@@ -303,22 +300,17 @@ async function saveSong(manual = false) {
 
     const textContent = `${song.title}\n${song.authors ? `Authors: ${song.authors}\n` : ''}\n` + song.sections.map(s => `${s.title}\n${s.text}`).join('\n\n');
     const textBlob = new Blob([textContent], { type: 'text/plain' });
-    const savedToFolder = await saveFile(`${folderName}/lyrics.txt`, textBlob, directoryHandle, manual && !directoryHandle);
+    const savedToFolder = await saveFile(`${folderName}/lyrics.txt`, directoryHandle, manual && !directoryHandle);
 
     if (manual) {
         alert('Song saved!' + (savedToFolder ? ' Check your folder.' : ' Saved to Downloads (no folder selected).'));
     } else {
         showAutosaveFeedback();
     }
-    updatePresentation();
+    debouncedUpdatePresentation();
 }
 
 document.getElementById('saveSong').addEventListener('click', () => saveSong(true));
-
-document.getElementById('backToList').addEventListener('click', () => {
-    saveSong(false);
-    updateSongList();
-});
 
 document.getElementById('darkModeToggle').addEventListener('click', () => {
     const body = document.body;
@@ -341,16 +333,28 @@ document.getElementById('darkModeToggle').addEventListener('click', () => {
     }
 });
 
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
 let debounceTimeout;
 function debounceAutosave() {
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(triggerAutosave, 2000);
 }
 
+const debouncedUpdatePresentation = debounce(updatePresentation, 300);
+
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('input, textarea, select').forEach(element => {
-        element.addEventListener('input', debounceAutosave);
-    });
+    document.getElementById('editor').addEventListener('input', (e) => {
+        if (e.target.matches('input, textarea, select')) {
+            debounceAutosave();
+        }
+    }, true);
 
     document.querySelectorAll('.format-button.columns, .format-button.font').forEach(button => {
         button.addEventListener('click', () => {
@@ -364,11 +368,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.dataset.selected = 'true';
                 button.classList.add('selected');
                 formatOptions[option] = value;
-                // Apply font to editing area
                 document.querySelectorAll('.lyrics-chords').forEach(textarea => {
                     textarea.style.fontFamily = formatOptions.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif';
                 });
-                updatePresentation();
+                debouncedUpdatePresentation();
             }
         });
     });
@@ -377,14 +380,11 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', () => {
             let steps = formatOptions.transposeSteps;
             const direction = button.dataset.direction;
-            if (direction === '+') {
-                steps = Math.min(steps + 1, 12);
-            } else if (direction === '-') {
-                steps = Math.max(steps - 1, -12);
-            }
+            if (direction === '+') steps = Math.min(steps + 1, 12);
+            else if (direction === '-') steps = Math.max(steps - 1, -12);
             formatOptions.transposeSteps = steps;
             document.getElementById('transpose-indicator').textContent = steps === 0 ? '0' : steps > 0 ? `+${steps}` : steps;
-            updatePresentation();
+            debouncedUpdatePresentation();
         });
     });
 
@@ -393,29 +393,44 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.bold-toggle').dataset.active = !isActive;
         document.querySelector('.bold-toggle').classList.toggle('active', !isActive);
         formatOptions.boldChords = !isActive;
-        updatePresentation();
+        debouncedUpdatePresentation();
     });
 
     document.getElementById('togglePresentation').addEventListener('click', () => {
         const panel = document.getElementById('presentation');
+        const sections = document.getElementById('sections');
         if (panel.style.display === 'none') {
             panel.style.display = 'block';
             document.getElementById('togglePresentation').textContent = 'Hide';
-            document.getElementById('sections').style.flex = '1'; // 50% when panel is visible
+            sections.style.flex = '1';
         } else {
             panel.style.display = 'none';
             document.getElementById('togglePresentation').textContent = 'Show';
-            document.getElementById('sections').style.flex = '9'; // Expand to 90% when hidden
+            sections.style.flex = '9';
         }
     });
 
-    // Initialize shading for chord lines in editing area with CSS
+    document.getElementById('toggleSongList').addEventListener('click', () => {
+        const songList = document.getElementById('songList');
+        const toggleBtn = document.getElementById('toggleSongList');
+        const editor = document.getElementById('editor');
+        if (songList.classList.contains('closed')) {
+            songList.classList.remove('closed');
+            toggleBtn.classList.add('open');
+            editor.style.flex = '3'; // 75% when open
+        } else {
+            songList.classList.add('closed');
+            toggleBtn.classList.remove('open');
+            editor.style.flex = '9'; // 90% when closed
+        }
+    });
+
     document.querySelectorAll('.lyrics-chords').forEach(textarea => {
-        textarea.style.whiteSpace = 'pre-wrap'; // Ensure line breaks are preserved
+        textarea.style.whiteSpace = 'pre-wrap';
     });
 });
 
-setInterval(triggerAutosave, 30000);
+setInterval(triggerAutosave, 60000);
 
 function triggerAutosave() {
     saveSong(false);
@@ -448,7 +463,10 @@ async function updateSongList() {
         `;
         songItems.appendChild(li);
 
-        li.querySelector('.song-name').addEventListener('click', () => loadSong(songName));
+        li.querySelector('.song-name').addEventListener('click', async () => {
+            await saveSong(false);
+            loadSong(songName);
+        });
         li.querySelector('.delete-song').addEventListener('click', async () => {
             if (confirm(`Are you sure you want to delete "${songName}"? This will remove it from the app, but not your computer folder.`)) {
                 await idbKeyval.del(key);
@@ -458,18 +476,19 @@ async function updateSongList() {
                     await idbKeyval.del(audioKey);
                 }
                 updateSongList();
+                if (currentSongKey === key) newSong();
             }
         });
     });
-    document.getElementById('songList').style.display = 'block';
-    document.getElementById('editor').style.display = 'none';
 }
 
-document.getElementById('newSong').addEventListener('click', () => {
+document.getElementById('newSong').addEventListener('click', () => newSong());
+
+function newSong() {
     currentSongKey = null;
     lastSavedData = null;
-    formatOptions.transposeSteps = 0; // Reset transposition on new song
-    formatOptions.boldChords = false; // Reset bold state
+    formatOptions.transposeSteps = 0;
+    formatOptions.boldChords = false;
     document.getElementById('songTitle').value = '';
     document.getElementById('songAuthors').value = '';
     document.getElementById('sections').innerHTML = `
@@ -540,21 +559,17 @@ document.getElementById('newSong').addEventListener('click', () => {
         setupMoveButtons(section);
         setupDeleteSectionButton(section);
     });
-    document.querySelector('.bold-toggle').dataset.active = 'false'; // Reset bold toggle to off
+    document.querySelector('.bold-toggle').dataset.active = 'false';
     document.querySelector('.bold-toggle').classList.remove('active');
-    document.getElementById('songList').style.display = 'none';
-    document.getElementById('editor').style.display = 'block';
     document.getElementById('presentation').style.display = 'block';
     document.getElementById('togglePresentation').textContent = 'Hide';
-    document.getElementById('sections').style.flex = '1'; // 50/50 split initially
-    document.getElementById('transpose-indicator').textContent = '0'; // Reset transpose indicator
-    // Apply default font to editing area
+    document.getElementById('transpose-indicator').textContent = '0';
     document.querySelectorAll('.lyrics-chords').forEach(textarea => {
         textarea.style.fontFamily = formatOptions.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif';
     });
-    updatePresentation();
+    debouncedUpdatePresentation();
     loadFormatOptions();
-});
+}
 
 async function loadSong(title) {
     const songData = await idbKeyval.get(`song-${title}`);
@@ -617,7 +632,6 @@ async function loadSong(title) {
                     if (blob) audio.src = URL.createObjectURL(blob);
                 };
             }
-            // Apply toggle button state
             const chordToggle = sectionDiv.querySelector('.chord-recognition-toggle');
             chordToggle.classList.toggle('active', section.recognizeChords);
         });
@@ -645,11 +659,6 @@ async function loadSong(title) {
             };
         }
 
-        document.getElementById('songList').style.display = 'none';
-        document.getElementById('editor').style.display = 'block';
-        document.getElementById('presentation').style.display = 'block';
-        document.getElementById('togglePresentation').textContent = 'Hide';
-        document.getElementById('sections').style.flex = '1'; // 50/50 split initially
         if (song.formatOptions) {
             formatOptions = song.formatOptions;
             document.querySelector('.bold-toggle').dataset.active = formatOptions.boldChords;
@@ -661,14 +670,12 @@ async function loadSong(title) {
             formatOptions.transposeSteps = song.formatOptions.transposeSteps || 0;
             document.getElementById('transpose-indicator').textContent = formatOptions.transposeSteps === 0 ? '0' : formatOptions.transposeSteps > 0 ? `+${formatOptions.transposeSteps}` : formatOptions.transposeSteps;
             document.getElementById('fontSize').value = formatOptions.fontSize;
-            // Apply font to editing area on load
             document.querySelectorAll('.lyrics-chords').forEach(textarea => {
                 textarea.style.fontFamily = formatOptions.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif';
             });
-            // document.getElementById('lyricsOnlyPdf').checked = formatOptions.lyricsOnlyPdf; // Removed
         }
         lastSavedData = JSON.stringify(song);
-        updatePresentation();
+        debouncedUpdatePresentation();
     }
 }
 
@@ -702,60 +709,59 @@ function updatePresentation() {
     }));
 
     const content = document.getElementById('presentation-content');
-    if (formatOptions.columns === 'two') {
-        // Estimate standard page height (letter size, 11 inches at 72 DPI = 792px, adjusted for scale)
-        const pageHeightPx = 792 / 2; // Adjust for html2pdf scale: 2
-        let column1Content = '';
-        let column2Content = '';
-        let totalHeight = 0;
-        let currentHeight = 0;
+    const fragment = document.createDocumentFragment();
+    const wrapper = document.createElement('div');
 
-        sections.forEach(section => {
-            const sectionHtml = `
-                <h3 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}; font-weight: bold">${section.title}</h3>
-                <div class="chord-chart">${section.text}</div>
-            `;
-            const temp = document.createElement('div');
-            temp.innerHTML = sectionHtml;
-            const height = temp.offsetHeight || 100; // Default to 100 if height can't be calculated
+    wrapper.innerHTML = formatOptions.columns === 'two'
+        ? `<h2 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${title}</h2>
+           ${authors ? `<p class="authors" style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${authors}</p>` : ''}
+           <div class="two-column">${splitIntoColumns(sections)}</div>`
+        : `<h2 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${title}</h2>
+           ${authors ? `<p class="authors" style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${authors}</p>` : ''}
+           ${sections.map(s => `
+               <h3 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}; font-weight: bold">${s.title}</h3>
+               <div class="chord-chart">${s.text}</div>
+           `).join('')}`;
 
-            if (currentHeight + height <= pageHeightPx) {
-                column1Content += sectionHtml;
-                currentHeight += height;
-            } else {
-                column2Content += sectionHtml;
-                totalHeight += height;
-            }
-        });
+    fragment.appendChild(wrapper);
+    content.innerHTML = '';
+    content.appendChild(fragment);
+}
 
-        content.innerHTML = `
-            <h2 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${title}</h2>
-            ${authors ? `<p class="authors" style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${authors}</p>` : ''}
-            <div class="two-column">
-                <div class="column">${column1Content}</div>
-                <div class="column">${column2Content || ''}</div>
-            </div>
+function splitIntoColumns(sections) {
+    const pageHeightPx = 792 / 2;
+    let column1Content = '';
+    let column2Content = '';
+    let currentHeight = 0;
+
+    sections.forEach(section => {
+        const sectionHtml = `
+            <h3 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}; font-weight: bold">${section.title}</h3>
+            <div class="chord-chart">${section.text}</div>
         `;
-    } else {
-        content.innerHTML = `
-            <h2 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${title}</h2>
-            ${authors ? `<p class="authors" style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${authors}</p>` : ''}
-            ${sections.map(s => `
-                <h3 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}; font-weight: bold">${s.title}</h3>
-                <div class="chord-chart">${s.text}</div>
-            `).join('')}
-        `;
-    }
+        const temp = document.createElement('div');
+        temp.innerHTML = sectionHtml;
+        const height = temp.offsetHeight || 100;
+
+        if (currentHeight + height <= pageHeightPx) {
+            column1Content += sectionHtml;
+            currentHeight += height;
+        } else {
+            column2Content += sectionHtml;
+        }
+    });
+
+    return `<div class="column">${column1Content}</div><div class="column">${column2Content || ''}</div>`;
 }
 
 document.getElementById('exportPdf').addEventListener('click', () => {
-    updatePresentation(); // Ensure latest format options are applied
+    updatePresentation();
     const element = document.getElementById('presentation-content');
     const opt = {
         margin: 1,
         filename: `${document.getElementById('songTitle').value || 'Untitled'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 1.5 },
         jsPDF: { unit: 'in', format: 'letter', orientation: formatOptions.columns === 'two' ? 'landscape' : 'portrait' }
     };
     html2pdf().from(element).set(opt).save();
