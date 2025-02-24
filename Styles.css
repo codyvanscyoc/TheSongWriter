@@ -1,0 +1,549 @@
+body.light-mode {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(to bottom, #f0f2f5, #dfe4ea);
+    margin: 0;
+    padding: 20px;
+    color: #2c3e50;
+    transition: background 0.3s, color 0.3s;
+}
+
+body.dark-mode {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(to bottom, #2c2c2c, #3c3c3c);
+    margin: 0;
+    padding: 20px;
+    color: #ffffff;
+    transition: background 0.3s, color 0.3s;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+body.dark-mode .container {
+    background: rgba(44, 44, 44, 0.9);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+h1 {
+    text-align: center;
+    color: inherit;
+    font-family: 'Georgia', serif;
+}
+
+h2 {
+    color: inherit;
+}
+
+.title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.title-container, .format-controls {
+    width: 50%;
+}
+
+#songTitle, #songAuthors {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #dcdcdc;
+    border-radius: 6px;
+    margin-bottom: 5px;
+    background: inherit;
+    color: inherit;
+}
+
+body.dark-mode #songTitle, body.dark-mode #songAuthors {
+    border-color: #555;
+    background: #3c3c3c;
+}
+
+.format-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.format-controls label {
+    margin-right: 5px;
+    color: inherit;
+    font-size: 0.9em;
+}
+
+.toggle-button {
+    width: 140px; /* Adjusted width for text */
+    height: 20px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    cursor: pointer;
+    margin: 2px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    border: 2px solid #95a5a6;
+    background: #fff;
+    color: #333;
+    padding: 0 8px; /* Add padding for better text fit */
+}
+
+body.dark-mode .toggle-button {
+    border-color: #b0bec5;
+    background: #444;
+    color: #fff;
+}
+
+.toggle-button[data-active="true"],
+.toggle-button.active {
+    background: #4a90e2;
+    border-color: #4a90e2;
+    color: #fff;
+}
+
+.toggle-button:hover {
+    border-color: #4a90e2;
+    box-shadow: 0 0 4px rgba(74, 144, 226, 0.5);
+}
+
+.format-button, .transpose-button {
+    width: 40px;
+    height: 20px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    cursor: pointer;
+    margin: 2px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    border: 2px solid #95a5a6;
+    background: #fff;
+    color: #333;
+}
+
+body.dark-mode .format-button, body.dark-mode .transpose-button {
+    border-color: #b0bec5;
+    background: #444;
+    color: #fff;
+}
+
+.format-button.columns {
+    background: #ab47bc;
+    border-color: #ab47bc;
+}
+
+.format-button.columns[data-selected="false"] {
+    background: transparent;
+    color: #ab47bc;
+    border-color: #ab47bc;
+}
+
+.format-button.font[data-value="Sans"] {
+    background: #4a90e2;
+    border-color: #4a90e2;
+}
+
+.format-button.font[data-value="Serif"] {
+    background: #f57c00;
+    border-color: #f57c00;
+}
+
+.format-button.font[data-selected="false"] {
+    background: transparent;
+    color: #333;
+    border-color: #333;
+}
+
+body.dark-mode .format-button.font[data-selected="false"] {
+    color: #fff;
+    border-color: #fff;
+}
+
+.format-button:hover, .transpose-button:hover {
+    border-color: #4a90e2;
+    box-shadow: 0 0 4px rgba(74, 144, 226, 0.5);
+}
+
+.format-button.selected, .transpose-button.selected {
+    background: #4a90e2;
+    border-color: #4a90e2;
+    color: #fff;
+}
+
+.transpose-button {
+    background: #ab47bc;
+    border-color: #ab47bc;
+}
+
+.transpose-button[data-direction="-"] {
+    margin-left: 5px;
+}
+
+#transpose-indicator {
+    margin: 0 5px;
+    font-size: 0.9em;
+    color: inherit;
+}
+
+#originalKey, #transposeKey, #fontSize {
+    padding: 4px;
+    border: 2px solid #dcdcdc;
+    border-radius: 4px;
+    background: inherit;
+    color: inherit;
+    margin-right: 5px;
+    width: 100px;
+    font-size: 0.9em;
+}
+
+body.dark-mode #originalKey, body.dark-mode #transposeKey, body.dark-mode #fontSize {
+    border-color: #555;
+    background: #3c3c3c;
+}
+
+.main-content {
+    display: flex;
+    gap: 20px;
+    position: relative;
+}
+
+.chords-advisory {
+    color: #7f8c8d;
+    font-size: 0.9em;
+    margin-bottom: 5px; /* Tight spacing above editing area */
+}
+
+body.dark-mode .chords-advisory {
+    color: #b0bec5;
+}
+
+#sections {
+    flex: 1; /* 50% when panel is visible */
+    display: block;
+    transition: flex 0.3s ease;
+}
+
+#togglePresentation {
+    background-color: #95a5a6;
+    padding: 4px 12px;
+    border-radius: 6px;
+    align-self: flex-start;
+    margin-left: 10px;
+}
+
+#togglePresentation:hover {
+    background-color: #7f8c8d;
+}
+
+input, textarea, select {
+    width: 100%;
+    margin: 8px 0;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 2px solid #dcdcdc;
+    border-radius: 6px;
+    background: inherit;
+    color: inherit;
+}
+
+body.dark-mode input, body.dark-mode textarea, body.dark-mode select {
+    border-color: #555;
+    background: #3c3c3c;
+}
+
+input.section-title {
+    font-weight: bold;
+    color: inherit;
+    width: calc(100% - 40px);
+}
+
+textarea.lyrics-chords {
+    height: 120px;
+    resize: vertical;
+    background: inherit;
+    font-family: Helvetica, sans-serif; /* Default to Sans (Helvetica) */
+    white-space: pre-wrap;
+}
+
+/* Shade odd-numbered (chord) lines in editing area with CSS */
+textarea.lyrics-chords::-webkit-scrollbar-track:vertical:nth-child(odd) {
+    background-color: #f5f5f5;
+}
+
+body.dark-mode textarea.lyrics-chords::-webkit-scrollbar-track:vertical:nth-child(odd) {
+    background-color: #555;
+}
+
+.audio-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.audio-select, #full-audio-select {
+    background-color: #ecf0f1;
+    color: #333;
+    flex: 1;
+}
+
+body.dark-mode .audio-select, body.dark-mode #full-audio-select {
+    background-color: #444;
+    color: #ffffff;
+}
+
+button {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    margin: 5px 0;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #357abd;
+}
+
+.record-btn {
+    background-color: #e57373;
+}
+
+.record-btn:hover {
+    background-color: #ef5350;
+}
+
+.delete-section, .delete-song, .delete-audio, #delete-full-audio {
+    background-color: #e57373;
+    padding: 4px 8px;
+    font-size: 14px;
+}
+
+.delete-section:hover, .delete-song:hover, .delete-audio:hover, #delete-full-audio:hover {
+    background-color: #ef5350;
+}
+
+.section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+body.dark-mode .section {
+    border-color: #555;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-audio, #fullAudio {
+    display: none;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.move-buttons {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+    align-items: center; /* Align items vertically */
+}
+
+.move-up, .move-down {
+    background-color: #95a5a6;
+    padding: 4px 8px;
+    font-size: 14px;
+}
+
+.move-up:hover, .move-down:hover {
+    background-color: #7f8c8d;
+}
+
+.full-song {
+    max-width: 50%; /* Match title area width */
+    margin-top: 20px;
+}
+
+#songList {
+    margin-bottom: 20px;
+}
+
+#songItems {
+    list-style: none;
+    padding: 0;
+}
+
+#songItems li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #ecf0f1;
+    margin: 5px 0;
+    border-radius: 6px;
+}
+
+body.dark-mode #songItems li {
+    background-color: #444;
+}
+
+#songItems li:hover {
+    background-color: #dfe4ea;
+}
+
+body.dark-mode #songItems li:hover {
+    background-color: #555;
+}
+
+.song-name {
+    cursor: pointer;
+}
+
+#newSong {
+    background-color: #2ecc71;
+}
+
+#newSong:hover {
+    background-color: #27ae60;
+}
+
+#backToList {
+    background-color: #34495e;
+}
+
+#backToList:hover {
+    background-color: #2c3e50;
+}
+
+#pickFolder {
+    margin-bottom: 10px;
+    background-color: #ab47bc;
+}
+
+#pickFolder:hover {
+    background-color: #8e24aa;
+}
+
+.mode-toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #95a5a6;
+    border: none;
+    padding: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.mode-toggle:hover {
+    background-color: #7f8c8d;
+}
+
+body.dark-mode .mode-toggle {
+    background-color: #b0bec5;
+}
+
+body.dark-mode .mode-toggle:hover {
+    background-color: #90a4ae;
+}
+
+.presentation-panel {
+    flex: 1; /* 50% when visible */
+    background: #fafafa;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .presentation-panel {
+    background: #444;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#presentation-content h2 {
+    font-size: 1em;
+    margin: 0 0 10px;
+    color: inherit;
+}
+
+#presentation-content .authors {
+    font-style: italic;
+    color: #7f8c8d;
+    margin: 0 0 15px;
+    font-size: 1em;
+}
+
+body.dark-mode #presentation-content .authors {
+    color: #b0bec5;
+}
+
+#presentation-content h3 {
+    font-size: 1em;
+    color: #34495e;
+    margin: 10px 0 5px;
+    font-weight: bold;
+}
+
+body.dark-mode #presentation-content h3 {
+    color: #90a4ae;
+}
+
+#presentation-content .chord-chart {
+    margin-bottom: 15px;
+}
+
+#presentation-content .chord-line {
+    font-family: inherit;
+    color: inherit;
+    font-weight: normal;
+    white-space: pre-wrap;
+}
+
+#presentation-content .chord.bold {
+    font-weight: bold !important; /* Increased specificity */
+}
+
+#presentation-content .lyric-line {
+    font-family: inherit;
+    color: inherit;
+    margin-left: 0;
+    white-space: pre-wrap;
+}
+
+.two-column {
+    display: flex;
+    gap: 20px;
+}
+
+.two-column .column {
+    flex: 1;
+    min-width: 300px;
+}
+
+#exportPdf {
+    background-color: #f57c00;
+    margin-top: 10px;
+}
+
+#exportPdf:hover {
+    background-color: #ef6c00;
+}
