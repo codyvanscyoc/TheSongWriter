@@ -222,18 +222,18 @@ body.dark-mode #fontSize {
 }
 
 #songList {
-    width: 25%; /* Full width when open */
+    width: 25%;
     transition: width 0.3s ease;
     overflow-y: auto;
     display: flex;
 }
 
 #songList.closed {
-    width: 40px; /* Just the toggle button when closed */
+    width: 40px;
 }
 
 .song-list-toggle-container {
-    width: 40px; /* Fixed width for toggle button */
+    width: 40px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -289,7 +289,7 @@ body.dark-mode #toggleSongList:hover {
 }
 
 #editor {
-    flex: 3; /* 75% when song list is open */
+    flex: 3;
     display: flex;
     gap: 20px;
     transition: flex 0.3s ease;
@@ -308,6 +308,7 @@ body.dark-mode .chords-advisory {
 #sections {
     flex: 1;
     contain: content;
+    transition: flex 0.3s ease;
 }
 
 #togglePresentation {
@@ -320,6 +321,32 @@ body.dark-mode .chords-advisory {
 
 #togglePresentation:hover {
     background-color: #7f8c8d;
+}
+
+#shareView {
+    background-color: #2ecc71;
+    padding: 4px 12px;
+    border-radius: 6px;
+    align-self: flex-start;
+    margin-left: 10px;
+}
+
+#shareView:hover {
+    background-color: #27ae60;
+}
+
+#joinView {
+    margin: 5px 0;
+    padding: 8px;
+    border: 2px solid #dcdcdc;
+    border-radius: 6px;
+    background: inherit;
+    color: inherit;
+}
+
+body.dark-mode #joinView {
+    border-color: #555;
+    background: #3c3c3c;
 }
 
 input, textarea, select {
@@ -488,6 +515,22 @@ body.dark-mode #songItems li:hover {
     background-color: #27ae60;
 }
 
+#exportAll {
+    background-color: #f57c00;
+}
+
+#exportAll:hover {
+    background-color: #ef6c00;
+}
+
+#importSongs {
+    background-color: #f57c00;
+}
+
+#importSongs:hover {
+    background-color: #ef6c00;
+}
+
 #pickFolder {
     margin-bottom: 10px;
     background-color: #ab47bc;
@@ -528,6 +571,14 @@ body.dark-mode .mode-toggle:hover {
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     contain: content;
+    transition: flex 0.3s ease;
+}
+
+.presentation-panel.hidden {
+    flex: 0;
+    width: 0;
+    overflow: hidden;
+    padding: 0;
 }
 
 body.dark-mode .presentation-panel {

@@ -11,6 +11,11 @@ let formatOptions = {
     fontSize: 'normal',
     lyricsOnlyPdf: false
 };
+let peerConnection = null;
+let dataChannel = null;
+let isHost = false;
+let viewCode = null;
+let signalingSocket = null;
 
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
@@ -243,6 +248,7 @@ document.getElementById('addSection').addEventListener('click', () => {
             <button class="move-up">↑</button>
             <button class="move-down">↓</button>
             <button class="toggle-button chord-recognition-toggle" data-active="true">Recognize chords</button>
+            <span class="chords-advisory">Chords are odd-numbered lines</span>
         </div>
     `;
     document.getElementById('sections').appendChild(section);
@@ -308,6 +314,13 @@ async function saveSong(manual = false) {
         showAutosaveFeedback();
     }
     debouncedUpdatePresentation();
+
+    // Send update to viewers if hosting
+    if (isHost && dataChannel && dataChannel.readyState === 'open') {
+        updatePresentation();
+        const pdfContent = document.getElementById('presentation-content').innerHTML;
+        dataChannel.send(JSON.stringify({ type: 'pdfUpdate', content: pdfContent }));
+    }
 }
 
 document.getElementById('saveSong').addEventListener('click', () => saveSong(true));
@@ -399,12 +412,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('togglePresentation').addEventListener('click', () => {
         const panel = document.getElementById('presentation');
         const sections = document.getElementById('sections');
-        if (panel.style.display === 'none') {
-            panel.style.display = 'block';
+        if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
             document.getElementById('togglePresentation').textContent = 'Hide';
             sections.style.flex = '1';
         } else {
-            panel.style.display = 'none';
+            panel.classList.add('hidden');
             document.getElementById('togglePresentation').textContent = 'Show';
             sections.style.flex = '9';
         }
@@ -417,11 +430,82 @@ document.addEventListener('DOMContentLoaded', () => {
         if (songList.classList.contains('closed')) {
             songList.classList.remove('closed');
             toggleBtn.classList.add('open');
-            editor.style.flex = '3'; // 75% when open
+            editor.style.flex = '3';
         } else {
             songList.classList.add('closed');
             toggleBtn.classList.remove('open');
-            editor.style.flex = '9'; // 90% when closed
+            editor.style.flex = '9';
+        }
+    });
+
+    document.getElementById('exportAll').addEventListener('click', async () => {
+        const zip = new JSZip();
+        const keys = await idbKeyval.keys();
+        const songKeys = keys.filter(key => key.startsWith('song-'));
+        const audioKeys = keys.filter(key => !key.startsWith('song-'));
+
+        for (const key of songKeys) {
+            const songData = await idbKeyval.get(key);
+            zip.file(`${key}.json`, songData);
+        }
+        for (const key of audioKeys) {
+            const audioBlob = await idbKeyval.get(key);
+            zip.file(`${key}.webm`, audioBlob);
+        }
+
+        const content = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(content);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `songs-${new Date().toISOString().split('T')[0]}.zip`;
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('importSongs').addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.zip';
+        input.onchange = async (event) => {
+            const file = event.target.files[0];
+            const zip = await JSZip.loadAsync(file);
+            const existingKeys = await idbKeyval.keys();
+
+            for (const [filename, fileData] of Object.entries(zip.files)) {
+                const key = filename.replace(/\.(json|webm)$/, '');
+                if (existingKeys.includes(key)) {
+                    const choice = confirm(`Song or audio "${key}" already exists. Replace or add as new? (OK = Replace, Cancel = Add New)`);
+                    if (choice) {
+                        await idbKeyval.set(key, await fileData.async(filename.endsWith('.json') ? 'string' : 'blob'));
+                    } else {
+                        const newKey = `${key}-copy${Math.floor(Math.random() * 1000)}`;
+                        await idbKeyval.set(newKey, await fileData.async(filename.endsWith('.json') ? 'string' : 'blob'));
+                    }
+                } else {
+                    await idbKeyval.set(key, await fileData.async(filename.endsWith('.json') ? 'string' : 'blob'));
+                }
+            }
+            updateSongList();
+            alert('Songs imported successfully!');
+        };
+        input.click();
+    });
+
+    document.getElementById('shareView').addEventListener('click', () => {
+        if (!isHost) {
+            isHost = true;
+            viewCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            alert(`Share this code with viewers: ${viewCode}`);
+            setupHostWebRTC(viewCode);
+        } else {
+            alert(`Already sharing with code: ${viewCode}`);
+        }
+    });
+
+    document.getElementById('joinView').addEventListener('change', (e) => {
+        const code = e.target.value.trim().toUpperCase();
+        if (code) {
+            setupViewerWebRTC(code);
         }
     });
 
@@ -508,6 +592,7 @@ function newSong() {
                 <button class="move-up">↑</button>
                 <button class="move-down">↓</button>
                 <button class="toggle-button chord-recognition-toggle" data-active="true">Recognize chords</button>
+                <span class="chords-advisory">Chords are odd-numbered lines</span>
             </div>
         </div>
         <div class="section">
@@ -526,6 +611,7 @@ function newSong() {
                 <button class="move-up">↑</button>
                 <button class="move-down">↓</button>
                 <button class="toggle-button chord-recognition-toggle" data-active="true">Recognize chords</button>
+                <span class="chords-advisory">Chords are odd-numbered lines</span>
             </div>
         </div>
         <div class="section">
@@ -544,6 +630,7 @@ function newSong() {
                 <button class="move-up">↑</button>
                 <button class="move-down">↓</button>
                 <button class="toggle-button chord-recognition-toggle" data-active="true">Recognize chords</button>
+                <span class="chords-advisory">Chords are odd-numbered lines</span>
             </div>
         </div>
     `;
@@ -600,6 +687,7 @@ async function loadSong(title) {
                     <button class="move-up">↑</button>
                     <button class="move-down">↓</button>
                     <button class="toggle-button chord-recognition-toggle" data-active="${section.recognizeChords}">Recognize chords</button>
+                    <span class="chords-advisory">Chords are odd-numbered lines</span>
                 </div>
             `;
             sectionsDiv.appendChild(sectionDiv);
@@ -696,6 +784,82 @@ function loadFormatOptions() {
                 <path d="M12 2a1 1 0 011 1v2a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1zm9.071-9.071a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-18.142 0a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414L2.929 12.071a1 1 0 010-1.414zM19.071 5.757a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm-14.242 14.242a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zM19.071 18.243a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm-14.242-14.242a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414z"/>
             </svg>`;
     }
+}
+
+function setupHostWebRTC(code) {
+    signalingSocket = new WebSocket('wss://signaling.herokuapp.com'); // Replace with a working signaling server if needed
+    peerConnection = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+    dataChannel = peerConnection.createDataChannel('pdfChannel');
+
+    dataChannel.onopen = () => console.log('Data channel open');
+    dataChannel.onmessage = (event) => console.log('Message from viewer:', event.data);
+    dataChannel.onclose = () => console.log('Data channel closed');
+
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, code }));
+        }
+    };
+
+    signalingSocket.onopen = () => {
+        peerConnection.createOffer()
+            .then(offer => peerConnection.setLocalDescription(offer))
+            .then(() => signalingSocket.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription, code })));
+    };
+
+    signalingSocket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'answer' && msg.code === code) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(msg.answer));
+        } else if (msg.type === 'candidate' && msg.code === code) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        }
+    };
+}
+
+function setupViewerWebRTC(code) {
+    signalingSocket = new WebSocket('wss://signaling.herokuapp.com'); // Replace with a working signaling server if needed
+    peerConnection = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    peerConnection.ondatachannel = (event) => {
+        dataChannel = event.channel;
+        dataChannel.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'pdfUpdate') {
+                document.getElementById('presentation-content').innerHTML = msg.content;
+                document.getElementById('sections').style.display = 'none';
+                document.getElementById('songList').style.display = 'none';
+                document.querySelector('.title-row').style.display = 'none';
+                document.getElementById('addSection').style.display = 'none';
+                document.querySelector('.full-song').style.display = 'none';
+                document.getElementById('saveSong').style.display = 'none';
+            }
+        };
+        dataChannel.onopen = () => console.log('Viewer data channel open');
+        dataChannel.onclose = () => console.log('Viewer data channel closed');
+    };
+
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, code }));
+        }
+    };
+
+    signalingSocket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'offer' && msg.code === code) {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(msg.offer))
+                .then(() => peerConnection.createAnswer())
+                .then(answer => peerConnection.setLocalDescription(answer))
+                .then(() => signalingSocket.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription, code })));
+        } else if (msg.type === 'candidate' && msg.code === code) {
+            peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        }
+    };
 }
 
 updateSongList();
