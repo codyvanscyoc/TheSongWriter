@@ -315,12 +315,11 @@ async function saveSong(manual = false) {
     }
     debouncedUpdatePresentation();
 
-    // Send update to viewers if hosting
     if (isHost && dataChannel && dataChannel.readyState === 'open') {
         updatePresentation();
         const pdfContent = document.getElementById('presentation-content').innerHTML;
         dataChannel.send(JSON.stringify({ type: 'pdfUpdate', content: pdfContent }));
-        document.getElementById('shareStatus').textContent = 'Sharing active';
+        document.getElementById('shareStatus').textContent = 'Connected - Sharing active';
     }
 }
 
@@ -508,6 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const code = e.target.value.trim().toUpperCase();
         if (code) {
             document.getElementById('joinStatus').textContent = 'Connecting...';
+            document.body.classList.add('viewer-mode');
             setupViewerWebRTC(code);
         }
     });
@@ -790,21 +790,23 @@ function loadFormatOptions() {
 }
 
 function setupHostWebRTC(code) {
-    signalingSocket = new WebSocket('wss://simple-signaling.glitch.me');
+    signalingSocket = new WebSocket('wss://signaling-server-example.glitch.me');
     peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
     dataChannel = peerConnection.createDataChannel('pdfChannel');
 
     dataChannel.onopen = () => {
-        console.log('Data channel open');
+        console.log('Host: Data channel open');
         document.getElementById('shareStatus').textContent = 'Connected - Sharing active';
     };
-    dataChannel.onmessage = (event) => console.log('Message from viewer:', event.data);
+    dataChannel.onmessage = (event) => console.log('Host: Message from viewer:', event.data);
     dataChannel.onclose = () => {
-        console.log('Data channel closed');
+        console.log('Host: Data channel closed');
         document.getElementById('shareStatus').textContent = 'Disconnected';
+        isHost = false;
     };
+    dataChannel.onerror = (err) => console.error('Host: Data channel error:', err);
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
@@ -813,26 +815,35 @@ function setupHostWebRTC(code) {
     };
 
     signalingSocket.onopen = () => {
+        console.log('Host: Signaling socket open');
         peerConnection.createOffer()
             .then(offer => peerConnection.setLocalDescription(offer))
             .then(() => signalingSocket.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription, room: code })))
-            .catch(err => console.error('Error creating offer:', err));
+            .catch(err => {
+                console.error('Host: Error creating offer:', err);
+                document.getElementById('shareStatus').textContent = 'Connection failed';
+            });
     };
 
     signalingSocket.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         if (msg.type === 'answer' && msg.room === code) {
             peerConnection.setRemoteDescription(new RTCSessionDescription(msg.answer))
-                .catch(err => console.error('Error setting remote description:', err));
+                .catch(err => console.error('Host: Error setting remote description:', err));
         } else if (msg.type === 'candidate' && msg.room === code) {
             peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate))
-                .catch(err => console.error('Error adding ICE candidate:', err));
+                .catch(err => console.error('Host: Error adding ICE candidate:', err));
         }
+    };
+
+    signalingSocket.onerror = (err) => {
+        console.error('Host: Signaling socket error:', err);
+        document.getElementById('shareStatus').textContent = 'Connection failed';
     };
 }
 
 function setupViewerWebRTC(code) {
-    signalingSocket = new WebSocket('wss://simple-signaling.glitch.me');
+    signalingSocket = new WebSocket('wss://signaling-server-example.glitch.me');
     peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
@@ -843,29 +854,29 @@ function setupViewerWebRTC(code) {
             const msg = JSON.parse(event.data);
             if (msg.type === 'pdfUpdate') {
                 document.getElementById('presentation-content').innerHTML = msg.content;
-                document.getElementById('sections').style.display = 'none';
-                document.getElementById('songList').style.display = 'none';
-                document.querySelector('.title-row').style.display = 'none';
-                document.getElementById('addSection').style.display = 'none';
-                document.querySelector('.full-song').style.display = 'none';
-                document.getElementById('saveSong').style.display = 'none';
                 document.getElementById('joinStatus').textContent = 'Connected - Viewing';
             }
         };
         dataChannel.onopen = () => {
-            console.log('Viewer data channel open');
+            console.log('Viewer: Data channel open');
             document.getElementById('joinStatus').textContent = 'Connected';
         };
         dataChannel.onclose = () => {
-            console.log('Viewer data channel closed');
+            console.log('Viewer: Data channel closed');
             document.getElementById('joinStatus').textContent = 'Disconnected';
+            document.body.classList.remove('viewer-mode');
         };
+        dataChannel.onerror = (err) => console.error('Viewer: Data channel error:', err);
     };
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
         }
+    };
+
+    signalingSocket.onopen = () => {
+        console.log('Viewer: Signaling socket open');
     };
 
     signalingSocket.onmessage = (event) => {
@@ -875,11 +886,19 @@ function setupViewerWebRTC(code) {
                 .then(() => peerConnection.createAnswer())
                 .then(answer => peerConnection.setLocalDescription(answer))
                 .then(() => signalingSocket.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription, room: code })))
-                .catch(err => console.error('Error handling offer:', err));
+                .catch(err => {
+                    console.error('Viewer: Error handling offer:', err);
+                    document.getElementById('joinStatus').textContent = 'Connection failed';
+                });
         } else if (msg.type === 'candidate' && msg.room === code) {
             peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate))
-                .catch(err => console.error('Error adding ICE candidate:', err));
+                .catch(err => console.error('Viewer: Error adding ICE candidate:', err));
         }
+    };
+
+    signalingSocket.onerror = (err) => {
+        console.error('Viewer: Signaling socket error:', err);
+        document.getElementById('joinStatus').textContent = 'Connection failed';
     };
 }
 
