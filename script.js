@@ -209,7 +209,7 @@ function setupMoveButtons(section) {
         const isActive = chordToggle.dataset.active === 'true';
         chordToggle.dataset.active = !isActive;
         chordToggle.classList.toggle('active', !isActive);
-        debouncedUpdatePresentation();
+        updatePresentation(); // Force immediate update
     });
 }
 
@@ -790,7 +790,7 @@ function loadFormatOptions() {
 }
 
 function setupHostWebRTC(code) {
-    signalingSocket = new WebSocket('wss://signaling-server-example.glitch.me');
+    signalingSocket = new WebSocket('wss://socketio-webrtc-signaling.herokuapp.com');
     peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
@@ -806,11 +806,15 @@ function setupHostWebRTC(code) {
         document.getElementById('shareStatus').textContent = 'Disconnected';
         isHost = false;
     };
-    dataChannel.onerror = (err) => console.error('Host: Data channel error:', err);
+    dataChannel.onerror = (err) => {
+        console.error('Host: Data channel error:', err);
+        document.getElementById('shareStatus').textContent = 'Connection error';
+    };
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
+            console.log('Host: Sent ICE candidate');
         }
     };
 
@@ -818,7 +822,10 @@ function setupHostWebRTC(code) {
         console.log('Host: Signaling socket open');
         peerConnection.createOffer()
             .then(offer => peerConnection.setLocalDescription(offer))
-            .then(() => signalingSocket.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription, room: code })))
+            .then(() => {
+                signalingSocket.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription, room: code }));
+                console.log('Host: Sent offer');
+            })
             .catch(err => {
                 console.error('Host: Error creating offer:', err);
                 document.getElementById('shareStatus').textContent = 'Connection failed';
@@ -829,9 +836,11 @@ function setupHostWebRTC(code) {
         const msg = JSON.parse(event.data);
         if (msg.type === 'answer' && msg.room === code) {
             peerConnection.setRemoteDescription(new RTCSessionDescription(msg.answer))
+                .then(() => console.log('Host: Answer received and set'))
                 .catch(err => console.error('Host: Error setting remote description:', err));
         } else if (msg.type === 'candidate' && msg.room === code) {
             peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate))
+                .then(() => console.log('Host: ICE candidate added'))
                 .catch(err => console.error('Host: Error adding ICE candidate:', err));
         }
     };
@@ -843,7 +852,7 @@ function setupHostWebRTC(code) {
 }
 
 function setupViewerWebRTC(code) {
-    signalingSocket = new WebSocket('wss://signaling-server-example.glitch.me');
+    signalingSocket = new WebSocket('wss://socketio-webrtc-signaling.herokuapp.com');
     peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
     });
@@ -855,6 +864,7 @@ function setupViewerWebRTC(code) {
             if (msg.type === 'pdfUpdate') {
                 document.getElementById('presentation-content').innerHTML = msg.content;
                 document.getElementById('joinStatus').textContent = 'Connected - Viewing';
+                console.log('Viewer: PDF updated');
             }
         };
         dataChannel.onopen = () => {
@@ -866,12 +876,16 @@ function setupViewerWebRTC(code) {
             document.getElementById('joinStatus').textContent = 'Disconnected';
             document.body.classList.remove('viewer-mode');
         };
-        dataChannel.onerror = (err) => console.error('Viewer: Data channel error:', err);
+        dataChannel.onerror = (err) => {
+            console.error('Viewer: Data channel error:', err);
+            document.getElementById('joinStatus').textContent = 'Connection error';
+        };
     };
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
+            console.log('Viewer: Sent ICE candidate');
         }
     };
 
@@ -885,13 +899,17 @@ function setupViewerWebRTC(code) {
             peerConnection.setRemoteDescription(new RTCSessionDescription(msg.offer))
                 .then(() => peerConnection.createAnswer())
                 .then(answer => peerConnection.setLocalDescription(answer))
-                .then(() => signalingSocket.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription, room: code })))
+                .then(() => {
+                    signalingSocket.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription, room: code }));
+                    console.log('Viewer: Sent answer');
+                })
                 .catch(err => {
                     console.error('Viewer: Error handling offer:', err);
                     document.getElementById('joinStatus').textContent = 'Connection failed';
                 });
         } else if (msg.type === 'candidate' && msg.room === code) {
             peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate))
+                .then(() => console.log('Viewer: ICE candidate added'))
                 .catch(err => console.error('Viewer: Error adding ICE candidate:', err));
         }
     };
