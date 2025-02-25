@@ -335,30 +335,6 @@ body.dark-mode .chords-advisory {
     background-color: #27ae60;
 }
 
-#shareStatus, #joinStatus {
-    margin-left: 10px;
-    font-size: 0.9em;
-    color: #28a745;
-}
-
-body.dark-mode #shareStatus, body.dark-mode #joinStatus {
-    color: #55efc4;
-}
-
-#joinView {
-    margin: 5px 0;
-    padding: 8px;
-    border: 2px solid #dcdcdc;
-    border-radius: 6px;
-    background: inherit;
-    color: inherit;
-}
-
-body.dark-mode #joinView {
-    border-color: #555;
-    background: #3c3c3c;
-}
-
 input, textarea, select {
     width: 100%;
     margin: 8px 0;
@@ -422,6 +398,11 @@ button {
 
 button:hover {
     background-color: #357abd;
+}
+
+button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
 }
 
 .record-btn {
@@ -580,15 +561,12 @@ body.dark-mode .mode-toggle:hover {
     padding: 15px;
     border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    contain: content;
     transition: flex 0.3s ease;
 }
 
 .presentation-panel.hidden {
     flex: 0;
-    width: 0;
     overflow: hidden;
-    padding: 0;
 }
 
 body.dark-mode .presentation-panel {
@@ -598,4 +576,99 @@ body.dark-mode .presentation-panel {
 
 #presentation-content h2 {
     font-size: 1em;
-    margin: 0 0 10
+    margin: 0 0 10px;
+    color: inherit;
+}
+
+#presentation-content .authors {
+    font-style: italic;
+    color: #7f8c8d;
+    margin: 0 0 15px;
+    font-size: 1em;
+}
+
+body.dark-mode #presentation-content .authors {
+    color: #b0bec5;
+}
+
+#presentation-content h3 {
+    font-size: 1em;
+    color: #34495e;
+    margin: 10px 0 5px;
+    font-weight: bold;
+}
+
+body.dark-mode #presentation-content h3 {
+    color: #90a4ae;
+}
+
+#presentation-content .chord-chart {
+    margin-bottom: 15px;
+}
+
+#presentation-content .chord-line {
+    font-family: inherit;
+    color: inherit;
+    font-weight: normal;
+    white-space: pre-wrap;
+}
+
+#presentation-content .chord.bold {
+    font-weight: bold;
+}
+
+#presentation-content .lyric-line {
+    font-family: inherit;
+    color: inherit;
+    margin-left: 0;
+    white-space: pre-wrap;
+}
+
+.two-column {
+    display: flex;
+    gap: 20px;
+}
+
+.two-column .column {
+    flex: 1;
+    min-width: 300px;
+}
+
+#exportPdf {
+    background-color: #f57c00;
+    margin-top: 10px;
+}
+
+#exportPdf:hover {
+    background-color: #ef6c00;
+}
+
+.viewer-mode {
+    position: relative;
+}
+
+.viewer-mode::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.viewer-mode #presentation {
+    position: relative;
+    z-index: 2;
+    background: #fafafa;
+}
+
+body.dark-mode.viewer-mode #presentation {
+    background: #444;
+}
+
+.viewer-mode #presentation * {
+    pointer-events: auto;
+}
