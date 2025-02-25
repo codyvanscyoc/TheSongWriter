@@ -11,11 +11,6 @@ let formatOptions = {
     fontSize: 'normal',
     lyricsOnlyPdf: false
 };
-let peerConnection = null;
-let dataChannel = null;
-let isHost = false;
-let viewCode = null;
-let signalingSocket = null;
 
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
@@ -314,13 +309,6 @@ async function saveSong(manual = false) {
         showAutosaveFeedback();
     }
     debouncedUpdatePresentation();
-
-    if (isHost && dataChannel && dataChannel.readyState === 'open') {
-        updatePresentation();
-        const pdfContent = document.getElementById('presentation-content').innerHTML;
-        dataChannel.send(JSON.stringify({ type: 'pdfUpdate', content: pdfContent }));
-        document.getElementById('shareStatus').textContent = 'Connected - Sharing active';
-    }
 }
 
 document.getElementById('saveSong').addEventListener('click', () => saveSong(true));
@@ -363,6 +351,35 @@ function debounceAutosave() {
 const debouncedUpdatePresentation = debounce(updatePresentation, 300);
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Check URL for view mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewData = urlParams.get('view');
+    if (viewData) {
+        const song = JSON.parse(decodeURIComponent(atob(viewData)));
+        document.body.classList.add('viewer-mode');
+        document.getElementById('songTitle').value = song.title;
+        document.getElementById('songAuthors').value = song.authors || '';
+        document.getElementById('sections').innerHTML = '';
+        song.sections.forEach(section => {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.classList.add('section');
+            sectionDiv.innerHTML = `
+                <div class="section-header">
+                    <input type="text" class="section-title" value="${section.title}" readonly>
+                </div>
+                <textarea class="lyrics-chords" readonly>${section.text}</textarea>
+            `;
+            document.getElementById('sections').appendChild(sectionDiv);
+        });
+        formatOptions = song.formatOptions;
+        updatePresentation();
+        document.querySelectorAll('button, input, textarea, select').forEach(el => el.disabled = true);
+        document.getElementById('presentation').classList.remove('hidden');
+        document.getElementById('togglePresentation').style.display = 'none';
+        document.getElementById('exportPdf').disabled = false;
+        return;
+    }
+
     document.getElementById('editor').addEventListener('input', (e) => {
         if (e.target.matches('input, textarea, select')) {
             debounceAutosave();
@@ -419,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             panel.classList.add('hidden');
             document.getElementById('togglePresentation').textContent = 'Show';
-            sections.style.flex = '9';
+            sections.style.flex = '2';
         }
     });
 
@@ -492,24 +509,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('shareView').addEventListener('click', () => {
-        if (!isHost) {
-            isHost = true;
-            viewCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            alert(`Share this code with viewers: ${viewCode}`);
-            document.getElementById('shareStatus').textContent = 'Connecting...';
-            setupHostWebRTC(viewCode);
-        } else {
-            alert(`Already sharing with code: ${viewCode}`);
-        }
-    });
-
-    document.getElementById('joinView').addEventListener('change', (e) => {
-        const code = e.target.value.trim().toUpperCase();
-        if (code) {
-            document.getElementById('joinStatus').textContent = 'Connecting...';
-            document.body.classList.add('viewer-mode');
-            setupViewerWebRTC(code);
-        }
+        const song = {
+            title: document.getElementById('songTitle').value || 'Untitled',
+            authors: document.getElementById('songAuthors').value,
+            sections: Array.from(document.querySelectorAll('.section')).map(section => ({
+                title: section.querySelector('.section-title').value,
+                text: section.querySelector('.lyrics-chords').value,
+                recognizeChords: section.querySelector('.chord-recognition-toggle').dataset.active === 'true'
+            })),
+            formatOptions: { ...formatOptions }
+        };
+        const encodedSong = btoa(encodeURIComponent(JSON.stringify(song)));
+        const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedSong}`;
+        prompt('Copy this URL to share the song for viewing:', shareUrl);
     });
 
     document.querySelectorAll('.lyrics-chords').forEach(textarea => {
@@ -651,7 +663,7 @@ function newSong() {
     });
     document.querySelector('.bold-toggle').dataset.active = 'false';
     document.querySelector('.bold-toggle').classList.remove('active');
-    document.getElementById('presentation').style.display = 'block';
+    document.getElementById('presentation').classList.remove('hidden');
     document.getElementById('togglePresentation').textContent = 'Hide';
     document.getElementById('transpose-indicator').textContent = '0';
     document.querySelectorAll('.lyrics-chords').forEach(textarea => {
@@ -787,137 +799,6 @@ function loadFormatOptions() {
                 <path d="M12 2a1 1 0 011 1v2a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1zm9.071-9.071a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-18.142 0a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414L2.929 12.071a1 1 0 010-1.414zM19.071 5.757a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm-14.242 14.242a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zM19.071 18.243a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm-14.242-14.242a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414z"/>
             </svg>`;
     }
-}
-
-function setupHostWebRTC(code) {
-    signalingSocket = new WebSocket('wss://socketio-webrtc-signaling.herokuapp.com');
-    peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-    dataChannel = peerConnection.createDataChannel('pdfChannel');
-
-    dataChannel.onopen = () => {
-        console.log('Host: Data channel open');
-        document.getElementById('shareStatus').textContent = 'Connected - Sharing active';
-    };
-    dataChannel.onmessage = (event) => console.log('Host: Message from viewer:', event.data);
-    dataChannel.onclose = () => {
-        console.log('Host: Data channel closed');
-        document.getElementById('shareStatus').textContent = 'Disconnected';
-        isHost = false;
-    };
-    dataChannel.onerror = (err) => {
-        console.error('Host: Data channel error:', err);
-        document.getElementById('shareStatus').textContent = 'Connection error';
-    };
-
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
-            console.log('Host: Sent ICE candidate');
-        }
-    };
-
-    signalingSocket.onopen = () => {
-        console.log('Host: Signaling socket open');
-        peerConnection.createOffer()
-            .then(offer => peerConnection.setLocalDescription(offer))
-            .then(() => {
-                signalingSocket.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription, room: code }));
-                console.log('Host: Sent offer');
-            })
-            .catch(err => {
-                console.error('Host: Error creating offer:', err);
-                document.getElementById('shareStatus').textContent = 'Connection failed';
-            });
-    };
-
-    signalingSocket.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'answer' && msg.room === code) {
-            peerConnection.setRemoteDescription(new RTCSessionDescription(msg.answer))
-                .then(() => console.log('Host: Answer received and set'))
-                .catch(err => console.error('Host: Error setting remote description:', err));
-        } else if (msg.type === 'candidate' && msg.room === code) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate))
-                .then(() => console.log('Host: ICE candidate added'))
-                .catch(err => console.error('Host: Error adding ICE candidate:', err));
-        }
-    };
-
-    signalingSocket.onerror = (err) => {
-        console.error('Host: Signaling socket error:', err);
-        document.getElementById('shareStatus').textContent = 'Connection failed';
-    };
-}
-
-function setupViewerWebRTC(code) {
-    signalingSocket = new WebSocket('wss://socketio-webrtc-signaling.herokuapp.com');
-    peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-
-    peerConnection.ondatachannel = (event) => {
-        dataChannel = event.channel;
-        dataChannel.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'pdfUpdate') {
-                document.getElementById('presentation-content').innerHTML = msg.content;
-                document.getElementById('joinStatus').textContent = 'Connected - Viewing';
-                console.log('Viewer: PDF updated');
-            }
-        };
-        dataChannel.onopen = () => {
-            console.log('Viewer: Data channel open');
-            document.getElementById('joinStatus').textContent = 'Connected';
-        };
-        dataChannel.onclose = () => {
-            console.log('Viewer: Data channel closed');
-            document.getElementById('joinStatus').textContent = 'Disconnected';
-            document.body.classList.remove('viewer-mode');
-        };
-        dataChannel.onerror = (err) => {
-            console.error('Viewer: Data channel error:', err);
-            document.getElementById('joinStatus').textContent = 'Connection error';
-        };
-    };
-
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
-            console.log('Viewer: Sent ICE candidate');
-        }
-    };
-
-    signalingSocket.onopen = () => {
-        console.log('Viewer: Signaling socket open');
-    };
-
-    signalingSocket.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'offer' && msg.room === code) {
-            peerConnection.setRemoteDescription(new RTCSessionDescription(msg.offer))
-                .then(() => peerConnection.createAnswer())
-                .then(answer => peerConnection.setLocalDescription(answer))
-                .then(() => {
-                    signalingSocket.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription, room: code }));
-                    console.log('Viewer: Sent answer');
-                })
-                .catch(err => {
-                    console.error('Viewer: Error handling offer:', err);
-                    document.getElementById('joinStatus').textContent = 'Connection failed';
-                });
-        } else if (msg.type === 'candidate' && msg.room === code) {
-            peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate))
-                .then(() => console.log('Viewer: ICE candidate added'))
-                .catch(err => console.error('Viewer: Error adding ICE candidate:', err));
-        }
-    };
-
-    signalingSocket.onerror = (err) => {
-        console.error('Viewer: Signaling socket error:', err);
-        document.getElementById('joinStatus').textContent = 'Connection failed';
-    };
 }
 
 updateSongList();
