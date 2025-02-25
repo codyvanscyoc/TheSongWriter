@@ -88,15 +88,16 @@ function parseChordsAndLyrics(text, options = formatOptions, recognizeChords = t
     lines.forEach((line, index) => {
         const lineNumber = index + 1;
         if (recognizeChords && lineNumber % 2 === 1) {
-            const chords = line.split(' ').map(chord => {
-                const transposed = options.transposeSteps !== 0 && chord.match(/^[A-G](#|b)?[0-9m7dim]*$/i)
-                    ? transposeChord(chord, options.transposeSteps)
-                    : chord;
-                return `<span class="chord${options.boldChords ? ' bold' : ''}" style="font-family: ${options.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif'}; font-size: ${options.fontSize === 'larger' ? '1.2em' : options.fontSize === 'smaller' ? '0.8em' : '1em'}; white-space: pre-wrap;">${transposed}</span>`;
-            }).join(' ');
+            const chords = line.split(/(\s+)/).map(part => {
+                if (part.match(/^[A-G](#|b)?[0-9m7dim]*$/i)) {
+                    const transposed = options.transposeSteps !== 0 ? transposeChord(part, options.transposeSteps) : part;
+                    return `<span class="chord${options.boldChords ? ' bold' : ''}">${transposed}</span>`;
+                }
+                return part; // Preserve spacing
+            }).join('');
             output += `<div class="chord-line">${chords}</div>`;
         } else {
-            output += `<div class="lyric-line" style="font-family: ${options.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif'}; font-size: ${options.fontSize === 'larger' ? '1.2em' : options.fontSize === 'smaller' ? '0.8em' : '1em'}; white-space: pre-wrap;">${line}</div>`;
+            output += `<div class="lyric-line">${line}</div>`;
         }
     });
 
@@ -204,7 +205,7 @@ function setupMoveButtons(section) {
         const isActive = chordToggle.dataset.active === 'true';
         chordToggle.dataset.active = !isActive;
         chordToggle.classList.toggle('active', !isActive);
-        updatePresentation(); // Force immediate update
+        updatePresentation(); // Immediate update
     });
 }
 
@@ -351,7 +352,6 @@ function debounceAutosave() {
 const debouncedUpdatePresentation = debounce(updatePresentation, 300);
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check URL for view mode
     const urlParams = new URLSearchParams(window.location.search);
     const viewData = urlParams.get('view');
     if (viewData) {
