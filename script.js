@@ -210,7 +210,7 @@ function setupMoveButtons(section) {
         const isActive = chordToggle.dataset.active === 'true';
         chordToggle.dataset.active = !isActive;
         chordToggle.classList.toggle('active', !isActive);
-        updatePresentation(); // Immediate update
+        updatePresentation();
     });
 }
 
@@ -363,6 +363,39 @@ function debounceAutosave() {
 const debouncedUpdatePresentation = debounce(updatePresentation, 300);
 
 document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewData = urlParams.get('view');
+    if (viewData) {
+        try {
+            const song = JSON.parse(decodeURIComponent(atob(viewData)));
+            document.body.classList.add('viewer-mode');
+            document.getElementById('songTitle').value = song.title;
+            document.getElementById('songAuthors').value = song.authors || '';
+            document.getElementById('sections').innerHTML = '';
+            song.sections.forEach(section => {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.classList.add('section');
+                sectionDiv.innerHTML = `
+                    <div class="section-header">
+                        <input type="text" class="section-title" value="${section.title}" readonly>
+                    </div>
+                    <textarea class="lyrics-chords" readonly>${section.text}</textarea>
+                `;
+                document.getElementById('sections').appendChild(sectionDiv);
+            });
+            formatOptions = { ...song.formatOptions };
+            updatePresentation(); // Ensure PDF renders
+            document.querySelectorAll('button, input, textarea, select').forEach(el => el.disabled = true);
+            document.getElementById('presentation').classList.remove('hidden');
+            document.getElementById('togglePresentation').style.display = 'none';
+            document.getElementById('exportPdf').disabled = false;
+        } catch (err) {
+            console.error('Error decoding view data:', err);
+            document.getElementById('presentation-content').innerHTML = '<p>Error loading song data</p>';
+        }
+        return;
+    }
+
     document.getElementById('editor').addEventListener('input', (e) => {
         if (e.target.matches('input, textarea, select')) {
             debounceAutosave();
@@ -498,6 +531,19 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`Share this code with viewers: ${viewCode}`);
             document.getElementById('shareStatus').textContent = 'Connecting...';
             setupHostWebRTC(viewCode);
+            const song = {
+                title: document.getElementById('songTitle').value || 'Untitled',
+                authors: document.getElementById('songAuthors').value,
+                sections: Array.from(document.querySelectorAll('.section')).map(section => ({
+                    title: section.querySelector('.section-title').value,
+                    text: section.querySelector('.lyrics-chords').value,
+                    recognizeChords: section.querySelector('.chord-recognition-toggle').dataset.active === 'true'
+                })),
+                formatOptions: { ...formatOptions }
+            };
+            const encodedSong = btoa(encodeURIComponent(JSON.stringify(song)));
+            const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedSong}`;
+            prompt('Or copy this URL for a static view:', shareUrl);
         } else {
             alert(`Already sharing with code: ${viewCode}`);
         }
@@ -830,10 +876,16 @@ function setupViewerWebRTC(code) {
         dataChannel = event.channel;
         dataChannel.onmessage = (event) => {
             const msg = JSON.parse(event.data);
-            if (msg.type === 'pdfUpdate') document.getElementById('presentation-content').innerHTML = msg.content;
+            if (msg.type === 'pdfUpdate') {
+                document.getElementById('presentation-content').innerHTML = msg.content;
+                document.getElementById('joinStatus').textContent = 'Connected - Viewing';
+            }
         };
         dataChannel.onopen = () => document.getElementById('joinStatus').textContent = 'Connected';
-        dataChannel.onclose = () => document.getElementById('joinStatus').textContent = 'Disconnected';
+        dataChannel.onclose = () => {
+            document.getElementById('joinStatus').textContent = 'Disconnected';
+            document.body.classList.remove('viewer-mode');
+        };
         dataChannel.onerror = (err) => {
             console.error('Viewer: Data channel error:', err);
             document.getElementById('joinStatus').textContent = 'Connection failed';
