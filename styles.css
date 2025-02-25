@@ -335,6 +335,30 @@ body.dark-mode .chords-advisory {
     background-color: #27ae60;
 }
 
+#shareStatus, #joinStatus {
+    margin-left: 10px;
+    font-size: 0.9em;
+    color: #28a745;
+}
+
+body.dark-mode #shareStatus, body.dark-mode #joinStatus {
+    color: #55efc4;
+}
+
+#joinView {
+    margin: 5px 0;
+    padding: 8px;
+    border: 2px solid #dcdcdc;
+    border-radius: 6px;
+    background: inherit;
+    color: inherit;
+}
+
+body.dark-mode #joinView {
+    border-color: #555;
+    background: #3c3c3c;
+}
+
 input, textarea, select {
     width: 100%;
     margin: 8px 0;
@@ -609,8 +633,12 @@ body.dark-mode #presentation-content h3 {
 #presentation-content .chord-line {
     font-family: inherit;
     color: inherit;
-    font-weight: normal;
     white-space: pre-wrap;
+    margin-bottom: 5px;
+}
+
+#presentation-content .chord {
+    color: #e74c3c;
 }
 
 #presentation-content .chord.bold {
@@ -620,8 +648,8 @@ body.dark-mode #presentation-content h3 {
 #presentation-content .lyric-line {
     font-family: inherit;
     color: inherit;
-    margin-left: 0;
     white-space: pre-wrap;
+    margin-bottom: 5px;
 }
 
 .two-column {
