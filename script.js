@@ -11,11 +11,6 @@ let formatOptions = {
     fontSize: 'normal',
     lyricsOnlyPdf: false
 };
-let peerConnection = null;
-let dataChannel = null;
-let isHost = false;
-let viewCode = null;
-let signalingSocket = null;
 
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
@@ -98,7 +93,7 @@ function parseChordsAndLyrics(text, options = formatOptions, recognizeChords = t
                     const transposed = options.transposeSteps !== 0 ? transposeChord(part, options.transposeSteps) : part;
                     return `<span class="chord${options.boldChords ? ' bold' : ''}">${transposed}</span>`;
                 }
-                return part; // Preserve spacing
+                return part;
             }).join('');
             output += `<div class="chord-line">${chords}</div>`;
         } else {
@@ -315,12 +310,6 @@ async function saveSong(manual = false) {
         showAutosaveFeedback();
     }
     debouncedUpdatePresentation();
-
-    if (isHost && dataChannel && dataChannel.readyState === 'open') {
-        updatePresentation();
-        const pdfContent = document.getElementById('presentation-content').innerHTML;
-        dataChannel.send(JSON.stringify({ type: 'pdfUpdate', content: pdfContent }));
-    }
 }
 
 document.getElementById('saveSong').addEventListener('click', () => saveSong(true));
@@ -384,11 +373,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('sections').appendChild(sectionDiv);
             });
             formatOptions = { ...song.formatOptions };
-            updatePresentation(); // Ensure PDF renders
+            updatePresentation();
             document.querySelectorAll('button, input, textarea, select').forEach(el => el.disabled = true);
             document.getElementById('presentation').classList.remove('hidden');
             document.getElementById('togglePresentation').style.display = 'none';
             document.getElementById('exportPdf').disabled = false;
+            document.getElementById('refreshView').style.display = 'block';
+            document.getElementById('refreshView').addEventListener('click', () => {
+                location.reload(); // Simple refresh reloads the URL data
+            });
         } catch (err) {
             console.error('Error decoding view data:', err);
             document.getElementById('presentation-content').innerHTML = '<p>Error loading song data</p>';
@@ -434,10 +427,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.querySelector('.bold-toggle').addEventListener('click', () => {
-        const isActive = document.querySelector('.bold-toggle').dataset.active === 'true';
-        document.querySelector('.bold-toggle').dataset.active = !isActive;
-        document.querySelector('.bold-toggle').classList.toggle('active', !isActive);
+    const boldToggle = document.querySelector('.bold-toggle');
+    boldToggle.addEventListener('click', () => {
+        const isActive = boldToggle.dataset.active === 'true';
+        boldToggle.dataset.active = !isActive;
+        boldToggle.classList.toggle('active', !isActive);
         formatOptions.boldChords = !isActive;
         debouncedUpdatePresentation();
     });
@@ -525,37 +519,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('shareView').addEventListener('click', () => {
-        if (!isHost) {
-            isHost = true;
-            viewCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            alert(`Share this code with viewers: ${viewCode}`);
-            document.getElementById('shareStatus').textContent = 'Connecting...';
-            setupHostWebRTC(viewCode);
-            const song = {
-                title: document.getElementById('songTitle').value || 'Untitled',
-                authors: document.getElementById('songAuthors').value,
-                sections: Array.from(document.querySelectorAll('.section')).map(section => ({
-                    title: section.querySelector('.section-title').value,
-                    text: section.querySelector('.lyrics-chords').value,
-                    recognizeChords: section.querySelector('.chord-recognition-toggle').dataset.active === 'true'
-                })),
-                formatOptions: { ...formatOptions }
-            };
-            const encodedSong = btoa(encodeURIComponent(JSON.stringify(song)));
-            const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedSong}`;
-            prompt('Or copy this URL for a static view:', shareUrl);
-        } else {
-            alert(`Already sharing with code: ${viewCode}`);
-        }
-    });
-
-    document.getElementById('joinView').addEventListener('change', (e) => {
-        const code = e.target.value.trim().toUpperCase();
-        if (code) {
-            document.getElementById('joinStatus').textContent = 'Connecting...';
-            document.body.classList.add('viewer-mode');
-            setupViewerWebRTC(code);
-        }
+        const song = {
+            title: document.getElementById('songTitle').value || 'Untitled',
+            authors: document.getElementById('songAuthors').value,
+            sections: Array.from(document.querySelectorAll('.section')).map(section => ({
+                title: section.querySelector('.section-title').value,
+                text: section.querySelector('.lyrics-chords').value,
+                recognizeChords: section.querySelector('.chord-recognition-toggle').dataset.active === 'true'
+            })),
+            formatOptions: { ...formatOptions }
+        };
+        const encodedSong = btoa(encodeURIComponent(JSON.stringify(song)));
+        const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedSong}`;
+        prompt('Copy this URL to share the song (viewers can refresh for updates):', shareUrl);
     });
 
     document.querySelectorAll('.lyrics-chords').forEach(textarea => {
@@ -833,83 +809,6 @@ function loadFormatOptions() {
                 <path d="M12 2a1 1 0 011 1v2a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1zm9.071-9.071a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-18.142 0a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414L2.929 12.071a1 1 0 010-1.414zM19.071 5.757a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm-14.242 14.242a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zM19.071 18.243a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm-14.242-14.242a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414z"/>
             </svg>`;
     }
-}
-
-function setupHostWebRTC(code) {
-    signalingSocket = new WebSocket('wss://signaling-server.fly.dev');
-    peerConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-    dataChannel = peerConnection.createDataChannel('pdfChannel');
-
-    dataChannel.onopen = () => document.getElementById('shareStatus').textContent = 'Connected - Sharing';
-    dataChannel.onclose = () => document.getElementById('shareStatus').textContent = 'Disconnected';
-    dataChannel.onerror = (err) => {
-        console.error('Host: Data channel error:', err);
-        document.getElementById('shareStatus').textContent = 'Connection failed';
-    };
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
-    };
-
-    signalingSocket.onopen = () => {
-        peerConnection.createOffer()
-            .then(offer => peerConnection.setLocalDescription(offer))
-            .then(() => signalingSocket.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription, room: code })));
-    };
-
-    signalingSocket.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'answer' && msg.room === code) peerConnection.setRemoteDescription(new RTCSessionDescription(msg.answer));
-        else if (msg.type === 'candidate' && msg.room === code) peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
-    };
-
-    signalingSocket.onerror = (err) => {
-        console.error('Host: Signaling error:', err);
-        document.getElementById('shareStatus').textContent = 'Connection failed';
-    };
-}
-
-function setupViewerWebRTC(code) {
-    signalingSocket = new WebSocket('wss://signaling-server.fly.dev');
-    peerConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-
-    peerConnection.ondatachannel = (event) => {
-        dataChannel = event.channel;
-        dataChannel.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            if (msg.type === 'pdfUpdate') {
-                document.getElementById('presentation-content').innerHTML = msg.content;
-                document.getElementById('joinStatus').textContent = 'Connected - Viewing';
-            }
-        };
-        dataChannel.onopen = () => document.getElementById('joinStatus').textContent = 'Connected';
-        dataChannel.onclose = () => {
-            document.getElementById('joinStatus').textContent = 'Disconnected';
-            document.body.classList.remove('viewer-mode');
-        };
-        dataChannel.onerror = (err) => {
-            console.error('Viewer: Data channel error:', err);
-            document.getElementById('joinStatus').textContent = 'Connection failed';
-        };
-    };
-
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) signalingSocket.send(JSON.stringify({ type: 'candidate', candidate: event.candidate, room: code }));
-    };
-
-    signalingSocket.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'offer' && msg.room === code) {
-            peerConnection.setRemoteDescription(new RTCSessionDescription(msg.offer))
-                .then(() => peerConnection.createAnswer())
-                .then(answer => peerConnection.setLocalDescription(answer))
-                .then(() => signalingSocket.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription, room: code })));
-        } else if (msg.type === 'candidate' && msg.room === code) peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
-    };
-
-    signalingSocket.onerror = (err) => {
-        console.error('Viewer: Signaling error:', err);
-        document.getElementById('joinStatus').textContent = 'Connection failed';
-    };
 }
 
 updateSongList();
