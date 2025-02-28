@@ -96,6 +96,7 @@ body.dark-mode #songTitle, body.dark-mode #songAuthors {
     border: 2px solid #95a5a6;
     background: #fff;
     color: #333;
+    padding: 0 8px;
 }
 
 body.dark-mode .toggle-button {
@@ -114,6 +115,11 @@ body.dark-mode .toggle-button {
 .toggle-button:hover {
     border-color: #4a90e2;
     box-shadow: 0 0 4px rgba(74, 144, 226, 0.5);
+}
+
+.toggle-button.chord-recognition-toggle {
+    font-size: 0.7em; /* Smaller font size */
+    white-space: nowrap; /* Keeps text on one line */
 }
 
 .format-button, .transpose-button {
