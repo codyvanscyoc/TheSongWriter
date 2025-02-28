@@ -374,13 +374,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             formatOptions = { ...song.formatOptions };
             updatePresentation();
-            document.querySelectorAll('button, input, textarea, select').forEach(el => el.disabled = true);
             document.getElementById('presentation').classList.remove('hidden');
             document.getElementById('togglePresentation').style.display = 'none';
-            document.getElementById('exportPdf').disabled = false;
             document.getElementById('refreshView').style.display = 'block';
             document.getElementById('refreshView').addEventListener('click', () => {
-                location.reload(); // Simple refresh reloads the URL data
+                location.reload();
             });
         } catch (err) {
             console.error('Error decoding view data:', err);
@@ -820,19 +818,26 @@ function updatePresentation() {
         title: section.querySelector('.section-title').value || 'Untitled Section',
         text: parseChordsAndLyrics(section.querySelector('.lyrics-chords').value, formatOptions, section.querySelector('.chord-recognition-toggle').dataset.active === 'true')
     }));
+    
+    const fontSizeMap = {
+        'smaller': '0.8em',
+        'normal': '1em',
+        'larger': '1.2em'
+    };
+    const fontSize = fontSizeMap[formatOptions.fontSize] || '1em';
 
     const content = document.getElementById('presentation-content');
     const fragment = document.createDocumentFragment();
     const wrapper = document.createElement('div');
 
     wrapper.innerHTML = formatOptions.columns === 'two'
-        ? `<h2 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${title}</h2>
-           ${authors ? `<p class="authors" style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${authors}</p>` : ''}
+        ? `<h2 style="font-size: ${fontSize}">${title}</h2>
+           ${authors ? `<p class="authors" style="font-size: ${fontSize}">${authors}</p>` : ''}
            <div class="two-column">${splitIntoColumns(sections)}</div>`
-        : `<h2 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${title}</h2>
-           ${authors ? `<p class="authors" style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}">${authors}</p>` : ''}
+        : `<h2 style="font-size: ${fontSize}">${title}</h2>
+           ${authors ? `<p class="authors" style="font-size: ${fontSize}">${authors}</p>` : ''}
            ${sections.map(s => `
-               <h3 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}; font-weight: bold">${s.title}</h3>
+               <h3 style="font-size: ${fontSize}; font-weight: bold">${s.title}</h3>
                <div class="chord-chart">${s.text}</div>
            `).join('')}`;
 
@@ -847,9 +852,16 @@ function splitIntoColumns(sections) {
     let column2Content = '';
     let currentHeight = 0;
 
+    const fontSizeMap = {
+        'smaller': '0.8em',
+        'normal': '1em',
+        'larger': '1.2em'
+    };
+    const fontSize = fontSizeMap[formatOptions.fontSize] || '1em';
+
     sections.forEach(section => {
         const sectionHtml = `
-            <h3 style="font-size: ${formatOptions.fontSize === 'larger' ? '1.2em' : formatOptions.fontSize === 'smaller' ? '0.8em' : '1em'}; font-weight: bold">${section.title}</h3>
+            <h3 style="font-size: ${fontSize}; font-weight: bold">${section.title}</h3>
             <div class="chord-chart">${section.text}</div>
         `;
         const temp = document.createElement('div');
