@@ -373,15 +373,19 @@ function connectWebSocket(room, isHostFlag) {
             const pdfContent = document.getElementById('presentation-content').innerHTML;
             ws.send(JSON.stringify({ type: 'pdfUpdate', content: pdfContent }));
         } else {
-            document.getElementById('refreshView').style.display = 'block';
-            document.getElementById('joinRoom').style.display = 'block';
+            document.getElementById('viewer-join').style.display = 'block';
+            document.getElementById('viewer-status').textContent = 'Connected';
         }
     };
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'pdfUpdate') {
-            document.getElementById('presentation-content').innerHTML = data.content;
+            if (isHost) {
+                document.getElementById('presentation-content').innerHTML = data.content;
+            } else {
+                document.getElementById('viewer-content').innerHTML = data.content;
+            }
         }
     };
 
@@ -389,17 +393,17 @@ function connectWebSocket(room, isHostFlag) {
         console.log('WebSocket disconnected');
         ws = null;
         if (isHost) isHost = false;
-        if (!isHost) document.getElementById('refreshView').textContent = 'Disconnected';
+        if (!isHost) document.getElementById('viewer-status').textContent = 'Disconnected';
     };
 
     ws.onerror = (err) => {
         console.error('WebSocket error:', err);
-        if (!isHost) document.getElementById('refreshView').textContent = 'Connection failed';
+        if (!isHost) document.getElementById('viewer-status').textContent = 'Connection failed';
     };
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadFormatOptions(); // Load theme once on page load
+    loadFormatOptions();
 
     const urlParams = new URLSearchParams(window.location.search);
     const viewData = urlParams.get('view');
@@ -407,35 +411,38 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const song = JSON.parse(decodeURIComponent(atob(viewData)));
             document.body.classList.add('viewer-mode');
-            document.getElementById('songTitle').value = song.title;
-            document.getElementById('songAuthors').value = song.authors || '';
-            document.getElementById('sections').innerHTML = '';
-            song.sections.forEach(section => {
-                const sectionDiv = document.createElement('div');
-                sectionDiv.classList.add('section');
-                sectionDiv.innerHTML = `
-                    <div class="section-header">
-                        <input type="text" class="section-title" value="${section.title}" readonly>
-                    </div>
-                    <textarea class="lyrics-chords" readonly>${section.text}</textarea>
-                `;
-                document.getElementById('sections').appendChild(sectionDiv);
-            });
+            document.getElementById('container').style.display = 'none';
+            document.getElementById('viewer-container').style.display = 'block';
             formatOptions = { ...song.formatOptions };
-            updatePresentation();
-            document.getElementById('presentation').classList.remove('hidden');
-            document.getElementById('togglePresentation').style.display = 'none';
 
+            // Load initial content
+            const title = song.title || 'Untitled';
+            const authors = song.authors || '';
+            const sections = song.sections.map(section => ({
+                title: section.title || 'Untitled Section',
+                text: parseChordsAndLyrics(section.text, formatOptions, section.recognizeChords)
+            }));
+            const fontSizeMap = { 'smaller': '0.8em', 'normal': '1em', 'larger': '1.2em' };
+            const fontSize = fontSizeMap[formatOptions.fontSize] || '1em';
+            document.getElementById('viewer-content').innerHTML = formatOptions.columns === 'two'
+                ? `<h2 style="font-size: ${fontSize}">${title}</h2>
+                   ${authors ? `<p class="authors" style="font-size: ${fontSize}">${authors}</p>` : ''}
+                   <div class="two-column">${splitIntoColumns(sections)}</div>`
+                : `<h2 style="font-size: ${fontSize}">${title}</h2>
+                   ${authors ? `<p class="authors" style="font-size: ${fontSize}">${authors}</p>` : ''}
+                   ${sections.map(s => `<h3 style="font-size: ${fontSize}; font-weight: bold">${s.title}</h3><div class="chord-chart">${s.text}</div>`).join('')}`;
+
+            // Prompt for room code
             roomCode = prompt('Enter the room code your friend gave you to see live updates:');
             if (roomCode) connectWebSocket(roomCode, false);
 
-            document.getElementById('joinRoom').addEventListener('click', () => {
+            document.getElementById('viewer-join').addEventListener('click', () => {
                 roomCode = prompt('Enter the room code to reconnect:');
                 if (roomCode) connectWebSocket(roomCode, false);
             });
         } catch (err) {
             console.error('Error decoding view data:', err);
-            document.getElementById('presentation-content').innerHTML = '<p>Error loading song data</p>';
+            document.getElementById('viewer-content').innerHTML = '<p>Error loading song data</p>';
         }
         return;
     }
