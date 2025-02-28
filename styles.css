@@ -34,7 +34,7 @@ body.dark-mode .container {
 h1 {
     text-align: center;
     color: inherit;
-    font-family: 'Georgia', serif;
+    font-family: 'Roboto', sans-serif; /* Modern font */
 }
 
 h2 {
@@ -118,8 +118,8 @@ body.dark-mode .toggle-button {
 }
 
 .toggle-button.chord-recognition-toggle {
-    font-size: 0.7em; /* Smaller font size */
-    white-space: nowrap; /* Keeps text on one line */
+    font-size: 0.7em;
+    white-space: nowrap;
 }
 
 .format-button, .transpose-button {
@@ -629,7 +629,7 @@ body.dark-mode #presentation-content h3 {
 }
 
 #presentation-content .chord {
-    color: #e74c3c;
+    color: inherit; /* Changed from red to normal text color */
 }
 
 #presentation-content .chord.bold {
@@ -662,32 +662,10 @@ body.dark-mode #presentation-content h3 {
     background-color: #ef6c00;
 }
 
-.viewer-mode {
-    position: relative;
-}
-
-.viewer-mode::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1;
-    pointer-events: none;
-}
-
 .viewer-mode #presentation {
-    position: relative;
-    z-index: 2;
     background: #fafafa;
 }
 
 body.dark-mode.viewer-mode #presentation {
     background: #444;
-}
-
-.viewer-mode #presentation * {
-    pointer-events: auto;
 }
