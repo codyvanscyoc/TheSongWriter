@@ -59,7 +59,8 @@ async function saveFile(filename, data, folderHandle, forceDownload = false) {
 }
 
 function formatTimestamp(isoString) {
-    const date = new Date(isoString.replace(/-/g, ':').replace('T', ' ').split('.')[0]);
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return 'Recording'; // Fallback if invalid
     return date.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
@@ -119,7 +120,7 @@ function setupRecording(button, audioSelect, audioElement, baseKey, deleteBtn) {
             button.textContent = button.classList.contains('record-btn') ? 'Record Section' : 'Record Full Song';
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const timestamp = new Date().toISOString(); // Simpler ISO format
                 const audioKey = `${baseKey}-${timestamp}`;
                 const audioUrl = URL.createObjectURL(audioBlob);
 
@@ -143,6 +144,7 @@ function setupRecording(button, audioSelect, audioElement, baseKey, deleteBtn) {
                     const selectedKey = audioSelect.value;
                     const blob = await idbKeyval.get(selectedKey);
                     if (blob) audioElement.src = URL.createObjectURL(blob);
+                    else console.error('Blob not found for key:', selectedKey);
                 };
 
                 deleteBtn.onclick = async () => {
@@ -529,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const encodedSong = btoa(encodeURIComponent(JSON.stringify(song)));
         const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedSong}`;
-        prompt('Copy this URL to share the song (viewers can refresh for updates):', shareUrl);
+        prompt('Copy this URL to share the song (recopy after changes, then refresh viewer):', shareUrl);
     });
 
     document.querySelectorAll('.lyrics-chords').forEach(textarea => {
@@ -726,7 +728,7 @@ async function loadSong(title) {
             section.audioKeys.forEach(audioKey => {
                 const option = document.createElement('option');
                 option.value = audioKey;
-                option.textContent = formatTimestamp(audioKey.split('-').slice(-1)[0].replace(/-/g, ':').replace('T', ' ').split('.')[0]);
+                option.textContent = formatTimestamp(audioKey.split('-').slice(2).join('-')); // Adjusted for key format
                 audioSelect.appendChild(option);
             });
             if (section.audioKeys.length > 0) {
@@ -752,7 +754,7 @@ async function loadSong(title) {
         song.fullSongAudioKeys.forEach(audioKey => {
             const option = document.createElement('option');
             option.value = audioKey;
-            option.textContent = formatTimestamp(audioKey.split('-').slice(-1)[0].replace(/-/g, ':').replace('T', ' ').split('.')[0]);
+            option.textContent = formatTimestamp(audioKey.split('-').slice(2).join('-')); // Adjusted for key format
             fullAudioSelect.appendChild(option);
         });
         if (song.fullSongAudioKeys.length > 0) {
