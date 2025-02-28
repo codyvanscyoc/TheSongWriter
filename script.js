@@ -11,6 +11,9 @@ let formatOptions = {
     fontSize: 'normal',
     lyricsOnlyPdf: false
 };
+let ws = null; // WebSocket connection
+let isHost = false;
+let roomCode = null;
 
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     mediaRecorder = new MediaRecorder(stream);
@@ -60,7 +63,7 @@ async function saveFile(filename, data, folderHandle, forceDownload = false) {
 
 function formatTimestamp(isoString) {
     const date = new Date(isoString);
-    if (isNaN(date.getTime())) return 'Recording'; // Fallback if invalid
+    if (isNaN(date.getTime())) return 'Recording';
     return date.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
@@ -120,7 +123,7 @@ function setupRecording(button, audioSelect, audioElement, baseKey, deleteBtn) {
             button.textContent = button.classList.contains('record-btn') ? 'Record Section' : 'Record Full Song';
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const timestamp = new Date().toISOString(); // Simpler ISO format
+                const timestamp = new Date().toISOString();
                 const audioKey = `${baseKey}-${timestamp}`;
                 const audioUrl = URL.createObjectURL(audioBlob);
 
@@ -312,6 +315,12 @@ async function saveSong(manual = false) {
         showAutosaveFeedback();
     }
     debouncedUpdatePresentation();
+
+    if (isHost && ws && ws.readyState === WebSocket.OPEN) {
+        updatePresentation();
+        const pdfContent = document.getElementById('presentation-content').innerHTML;
+        ws.send(JSON.stringify({ type: 'pdfUpdate', content: pdfContent }));
+    }
 }
 
 document.getElementById('saveSong').addEventListener('click', () => saveSong(true));
@@ -353,6 +362,38 @@ function debounceAutosave() {
 
 const debouncedUpdatePresentation = debounce(updatePresentation, 300);
 
+function connectWebSocket(room, isHostFlag) {
+    ws = new WebSocket(`ws://localhost:8080?room=${room}`);
+    isHost = isHostFlag;
+
+    ws.onopen = () => {
+        console.log(`Connected to WebSocket room: ${room}`);
+        if (!isHost) {
+            document.getElementById('refreshView').style.display = 'block';
+            document.getElementById('refreshView').textContent = 'Connected - Viewing';
+        }
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'pdfUpdate') {
+            document.getElementById('presentation-content').innerHTML = data.content;
+        }
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        ws = null;
+        if (isHost) isHost = false;
+        if (!isHost) document.getElementById('refreshView').textContent = 'Disconnected';
+    };
+
+    ws.onerror = (err) => {
+        console.error('WebSocket error:', err);
+        if (!isHost) document.getElementById('refreshView').textContent = 'Connection failed';
+    };
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const viewData = urlParams.get('view');
@@ -378,10 +419,10 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePresentation();
             document.getElementById('presentation').classList.remove('hidden');
             document.getElementById('togglePresentation').style.display = 'none';
-            document.getElementById('refreshView').style.display = 'block';
-            document.getElementById('refreshView').addEventListener('click', () => {
-                location.reload();
-            });
+
+            // Prompt for room code and connect as viewer
+            roomCode = prompt('Enter the room code your friend gave you to see live updates:');
+            if (roomCode) connectWebSocket(roomCode, false);
         } catch (err) {
             console.error('Error decoding view data:', err);
             document.getElementById('presentation-content').innerHTML = '<p>Error loading song data</p>';
@@ -519,19 +560,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('shareView').addEventListener('click', () => {
-        const song = {
-            title: document.getElementById('songTitle').value || 'Untitled',
-            authors: document.getElementById('songAuthors').value,
-            sections: Array.from(document.querySelectorAll('.section')).map(section => ({
-                title: section.querySelector('.section-title').value,
-                text: section.querySelector('.lyrics-chords').value,
-                recognizeChords: section.querySelector('.chord-recognition-toggle').dataset.active === 'true'
-            })),
-            formatOptions: { ...formatOptions }
-        };
-        const encodedSong = btoa(encodeURIComponent(JSON.stringify(song)));
-        const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedSong}`;
-        prompt('Copy this URL to share the song (recopy after changes, then refresh viewer):', shareUrl);
+        if (!isHost) {
+            roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            connectWebSocket(roomCode, true);
+            alert(`Share this room code with your friends so they can see live updates: ${roomCode}`);
+            const song = {
+                title: document.getElementById('songTitle').value || 'Untitled',
+                authors: document.getElementById('songAuthors').value,
+                sections: Array.from(document.querySelectorAll('.section')).map(section => ({
+                    title: section.querySelector('.section-title').value,
+                    text: section.querySelector('.lyrics-chords').value,
+                    recognizeChords: section.querySelector('.chord-recognition-toggle').dataset.active === 'true'
+                })),
+                formatOptions: { ...formatOptions }
+            };
+            const encodedSong = btoa(encodeURIComponent(JSON.stringify(song)));
+            const shareUrl = `${window.location.origin}${window.location.pathname}?view=${encodedSong}`;
+            prompt('Copy this URL too—it gives them the starting song (they’ll need the room code for live updates):', shareUrl);
+        } else {
+            alert(`You’re already hosting with room code: ${roomCode}`);
+        }
     });
 
     document.querySelectorAll('.lyrics-chords').forEach(textarea => {
@@ -728,7 +776,7 @@ async function loadSong(title) {
             section.audioKeys.forEach(audioKey => {
                 const option = document.createElement('option');
                 option.value = audioKey;
-                option.textContent = formatTimestamp(audioKey.split('-').slice(2).join('-')); // Adjusted for key format
+                option.textContent = formatTimestamp(audioKey.split('-').slice(2).join('-'));
                 audioSelect.appendChild(option);
             });
             if (section.audioKeys.length > 0) {
@@ -754,7 +802,7 @@ async function loadSong(title) {
         song.fullSongAudioKeys.forEach(audioKey => {
             const option = document.createElement('option');
             option.value = audioKey;
-            option.textContent = formatTimestamp(audioKey.split('-').slice(2).join('-')); // Adjusted for key format
+            option.textContent = formatTimestamp(audioKey.split('-').slice(2).join('-'));
             fullAudioSelect.appendChild(option);
         });
         if (song.fullSongAudioKeys.length > 0) {
