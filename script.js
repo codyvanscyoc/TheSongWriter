@@ -11,7 +11,7 @@ let formatOptions = {
     fontSize: 'normal',
     lyricsOnlyPdf: false
 };
-let ws = null; // WebSocket connection
+let ws = null;
 let isHost = false;
 let roomCode = null;
 
@@ -368,9 +368,13 @@ function connectWebSocket(room, isHostFlag) {
 
     ws.onopen = () => {
         console.log(`Connected to WebSocket room: ${room}`);
-        if (!isHost) {
+        if (isHost) {
+            updatePresentation();
+            const pdfContent = document.getElementById('presentation-content').innerHTML;
+            ws.send(JSON.stringify({ type: 'pdfUpdate', content: pdfContent }));
+        } else {
             document.getElementById('refreshView').style.display = 'block';
-            document.getElementById('refreshView').textContent = 'Connected - Viewing';
+            document.getElementById('joinRoom').style.display = 'block';
         }
     };
 
@@ -395,6 +399,8 @@ function connectWebSocket(room, isHostFlag) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    loadFormatOptions(); // Load theme once on page load
+
     const urlParams = new URLSearchParams(window.location.search);
     const viewData = urlParams.get('view');
     if (viewData) {
@@ -420,9 +426,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('presentation').classList.remove('hidden');
             document.getElementById('togglePresentation').style.display = 'none';
 
-            // Prompt for room code and connect as viewer
             roomCode = prompt('Enter the room code your friend gave you to see live updates:');
             if (roomCode) connectWebSocket(roomCode, false);
+
+            document.getElementById('joinRoom').addEventListener('click', () => {
+                roomCode = prompt('Enter the room code to reconnect:');
+                if (roomCode) connectWebSocket(roomCode, false);
+            });
         } catch (err) {
             console.error('Error decoding view data:', err);
             document.getElementById('presentation-content').innerHTML = '<p>Error loading song data</p>';
@@ -728,116 +738,6 @@ function newSong() {
         textarea.style.fontFamily = formatOptions.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif';
     });
     debouncedUpdatePresentation();
-    loadFormatOptions();
-}
-
-async function loadSong(title) {
-    const songData = await idbKeyval.get(`song-${title}`);
-    if (songData) {
-        currentSongKey = `song-${title}`;
-        const song = JSON.parse(songData);
-        document.getElementById('songTitle').value = song.title;
-        document.getElementById('songAuthors').value = song.authors || '';
-
-        const sectionsDiv = document.getElementById('sections');
-        sectionsDiv.innerHTML = '';
-        song.sections.forEach(async (section, index) => {
-            const sectionDiv = document.createElement('div');
-            sectionDiv.classList.add('section');
-            sectionDiv.innerHTML = `
-                <div class="section-header">
-                    <input type="text" class="section-title" value="${section.title}" placeholder="Section (e.g., Verse)">
-                    <button class="delete-section">🗑️</button>
-                </div>
-                <textarea class="lyrics-chords" placeholder="Lyrics / Chords">${section.text}</textarea>
-                <button class="record-btn">Record Section</button>
-                <div class="audio-controls">
-                    <select class="audio-select"></select>
-                    <button class="delete-audio">🗑️</button>
-                </div>
-                <audio controls class="section-audio"></audio>
-                <div class="move-buttons">
-                    <button class="move-up">↑</button>
-                    <button class="move-down">↓</button>
-                    <button class="toggle-button chord-recognition-toggle" data-active="${section.recognizeChords}">Recognize chords</button>
-                    <span class="chords-advisory">Chords are odd-numbered lines</span>
-                </div>
-            `;
-            sectionsDiv.appendChild(sectionDiv);
-
-            const btn = sectionDiv.querySelector('.record-btn');
-            const audioSelect = sectionDiv.querySelector('.audio-select');
-            const audio = sectionDiv.querySelector('.section-audio');
-            const deleteBtn = sectionDiv.querySelector('.delete-audio');
-            setupRecording(btn, audioSelect, audio, `section-audio-${index}`, deleteBtn);
-            setupMoveButtons(sectionDiv);
-            setupDeleteSectionButton(sectionDiv);
-
-            section.audioKeys.forEach(audioKey => {
-                const option = document.createElement('option');
-                option.value = audioKey;
-                option.textContent = formatTimestamp(audioKey.split('-').slice(2).join('-'));
-                audioSelect.appendChild(option);
-            });
-            if (section.audioKeys.length > 0) {
-                audioSelect.selectedIndex = 0;
-                const latestKey = section.audioKeys[0];
-                const blob = await idbKeyval.get(latestKey);
-                if (blob) {
-                    audio.src = URL.createObjectURL(blob);
-                    audio.style.display = 'block';
-                }
-                audioSelect.onchange = async () => {
-                    const selectedKey = audioSelect.value;
-                    const blob = await idbKeyval.get(selectedKey);
-                    if (blob) audio.src = URL.createObjectURL(blob);
-                };
-            }
-            const chordToggle = sectionDiv.querySelector('.chord-recognition-toggle');
-            chordToggle.classList.toggle('active', section.recognizeChords);
-        });
-
-        const fullAudioSelect = document.getElementById('full-audio-select');
-        fullAudioSelect.innerHTML = '';
-        song.fullSongAudioKeys.forEach(audioKey => {
-            const option = document.createElement('option');
-            option.value = audioKey;
-            option.textContent = formatTimestamp(audioKey.split('-').slice(2).join('-'));
-            fullAudioSelect.appendChild(option);
-        });
-        if (song.fullSongAudioKeys.length > 0) {
-            fullAudioSelect.selectedIndex = 0;
-            const latestKey = song.fullSongAudioKeys[0];
-            const blob = await idbKeyval.get(latestKey);
-            if (blob) {
-                fullAudio.src = URL.createObjectURL(blob);
-                fullAudio.style.display = 'block';
-            }
-            fullAudioSelect.onchange = async () => {
-                const selectedKey = fullAudioSelect.value;
-                const blob = await idbKeyval.get(selectedKey);
-                if (blob) fullAudio.src = URL.createObjectURL(blob);
-            };
-        }
-
-        if (song.formatOptions) {
-            formatOptions = song.formatOptions;
-            document.querySelector('.bold-toggle').dataset.active = formatOptions.boldChords;
-            document.querySelector('.bold-toggle').classList.toggle('active', formatOptions.boldChords);
-            document.querySelector(`.format-button.font[data-value="${formatOptions.font}"]`).dataset.selected = 'true';
-            document.querySelector(`.format-button.font[data-value="${formatOptions.font}"]`).classList.add('selected');
-            document.querySelector(`.format-button.columns[data-value="${formatOptions.columns}"]`).dataset.selected = 'true';
-            document.querySelector(`.format-button.columns[data-value="${formatOptions.columns}"]`).classList.add('selected');
-            formatOptions.transposeSteps = song.formatOptions.transposeSteps || 0;
-            document.getElementById('transpose-indicator').textContent = formatOptions.transposeSteps === 0 ? '0' : formatOptions.transposeSteps > 0 ? `+${formatOptions.transposeSteps}` : formatOptions.transposeSteps;
-            document.getElementById('fontSize').value = formatOptions.fontSize;
-            document.querySelectorAll('.lyrics-chords').forEach(textarea => {
-                textarea.style.fontFamily = formatOptions.font === 'Serif' ? 'Courier New, monospace' : 'Helvetica, sans-serif';
-            });
-        }
-        lastSavedData = JSON.stringify(song);
-        debouncedUpdatePresentation();
-    }
 }
 
 function loadFormatOptions() {
