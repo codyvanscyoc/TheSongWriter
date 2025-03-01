@@ -3,22 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Songwriter</title>
+    <title>The Song Writer</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Live Songwriter</h1>
+        <h1>The Song Writer</h1>
+
         <div class="controls">
-            <input type="text" id="songTitle" placeholder="Enter Song Title">
+            <input type="text" id="songTitle" placeholder="Song Title">
+            <input type="text" id="songAuthors" placeholder="Authors">
             <button id="shareView">Share View</button>
         </div>
 
-        <div class="editor">
-            <textarea id="songEditor" placeholder="Type lyrics and chords here..."></textarea>
+        <div id="songList">
+            <h2>Saved Songs</h2>
+            <ul id="songItems"></ul>
+            <button id="newSong">New Song</button>
+            <button id="exportAll">Export All</button>
+            <button id="importSongs">Import</button>
         </div>
 
-        <div class="live-preview">
+        <div id="editor">
+            <div id="sections"></div>
+            <button id="addSection">Add Section</button>
+        </div>
+
+        <div id="presentation">
             <h2>Live Preview</h2>
             <div id="previewContent"></div>
             <button id="exportPdf">Export as PDF</button>
