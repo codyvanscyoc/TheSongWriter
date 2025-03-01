@@ -107,8 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (viewRoom) {
         connectWebSocket(viewRoom, false);
-        document.getElementById('editor').style.display = 'none';
+
+        // Hide everything except the PDF preview
+        document.getElementById('container').style.display = 'none';
         document.getElementById('presentation').style.display = 'block';
+        document.getElementById('presentation').classList.add('viewer-mode');
     }
 });
 
