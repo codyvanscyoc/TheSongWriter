@@ -1,47 +1,16 @@
-body.light-mode {
-    font-family: 'Arial', sans-serif;
-    background: linear-gradient(to bottom, #f0f2f5, #dfe4ea);
-    margin: 0;
-    padding: 20px;
-    color: #2c3e50;
-    transition: background 0.3s, color 0.3s;
-}
-
-body.dark-mode {
-    background: linear-gradient(to bottom, #2c2c2c, #3c3c3c);
-    color: #ffffff;
-}
-
-.container {
-    max-width: 1200px;
-    margin: auto;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
-
-body.dark-mode .container {
-    background: rgba(44, 44, 44, 0.9);
-}
-
-/* 🎯 Viewer Mode - Only Show the Live PDF Content */
 body.viewer-mode {
     background: white;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    overflow: hidden;
 }
 
 body.viewer-mode #presentation {
     width: 90%;
     max-width: 800px;
     background: white;
-    box-shadow: none;
     padding: 20px;
-    border-radius: 8px;
     font-size: 1.2em;
 }
 
@@ -56,56 +25,53 @@ body.viewer-mode #exportPdf {
     display: none;
 }
 
-/* Formatting for the Presentation Content */
-#presentation-content h2 {
-    font-size: 1.5em;
-    margin: 0 0 10px;
-    color: inherit;
-}
-
-#presentation-content .authors {
-    font-style: italic;
-    color: #7f8c8d;
-    font-size: 1em;
-}
-
-#presentation-content h3 {
-    font-size: 1.2em;
-    color: #34495e;
-    font-weight: bold;
-}
-
-#presentation-content .chord-chart {
-    margin-bottom: 15px;
-}
-
-#presentation-content .lyric-line {
-    white-space: pre-wrap;
-}
-
-#presentation-content .chord-line {
-    font-weight: bold;
-}
-
-/* 🎶 General Formatting */
-input, textarea {
-    width: 100%;
-    padding: 10px;
+/* 🎯 Fixes for Toggle Buttons */
+#togglePresentation {
+    background-color: #95a5a6;
+    padding: 4px 12px;
     border-radius: 6px;
-    border: 2px solid #dcdcdc;
-    background: inherit;
-    color: inherit;
-}
-
-button {
-    background-color: #4a90e2;
-    color: white;
-    border: none;
-    padding: 8px 16px;
+    align-self: flex-start;
+    margin-left: 10px;
     cursor: pointer;
-    border-radius: 6px;
 }
 
-button:hover {
-    background-color: #357abd;
+#togglePresentation:hover {
+    background-color: #7f8c8d;
+}
+
+/* Fix Song List Toggle */
+#songList {
+    width: 25%;
+    transition: width 0.3s ease;
+    overflow-y: auto;
+}
+
+#songList.closed {
+    width: 40px;
+}
+
+.song-list-toggle-container {
+    width: 40px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#toggleSongList {
+    width: 30px;
+    height: 30px;
+    padding: 8px;
+    border-radius: 6px;
+    background-color: #95a5a6;
+    transition: transform 0.3s ease, background-color 0.2s;
+    cursor: pointer;
+}
+
+#toggleSongList:hover {
+    background-color: #7f8c8d;
+}
+
+#toggleSongList.open {
+    transform: rotate(90deg);
 }
