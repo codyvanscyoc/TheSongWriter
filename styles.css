@@ -669,6 +669,35 @@ body.dark-mode #presentation-content h3 {
     background-color: #ef6c00;
 }
 
+body.viewer-mode {
+    background: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+body.viewer-mode #presentation {
+    width: 90%;
+    max-width: 800px;
+    background: white;
+    box-shadow: none;
+    padding: 20px;
+    border-radius: 8px;
+    font-size: 1.2em;
+}
+
+body.viewer-mode h2,
+body.viewer-mode h3,
+body.viewer-mode p {
+    text-align: center;
+}
+
+body.viewer-mode #refreshView,
+body.viewer-mode #exportPdf {
+    display: none;
+}
+
 .viewer-mode #presentation {
     background: #fafafa;
 }
