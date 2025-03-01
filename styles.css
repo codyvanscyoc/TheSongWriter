@@ -1,77 +1,71 @@
-body.viewer-mode {
-    background: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
-
-body.viewer-mode #presentation {
-    width: 90%;
-    max-width: 800px;
-    background: white;
+body {
+    font-family: Arial, sans-serif;
+    background: #f0f2f5;
+    color: #2c3e50;
+    margin: 0;
     padding: 20px;
-    font-size: 1.2em;
 }
 
-body.viewer-mode h2,
-body.viewer-mode h3,
-body.viewer-mode p {
+.container {
+    max-width: 1200px;
+    margin: auto;
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
     text-align: center;
+    font-family: Georgia, serif;
 }
 
-body.viewer-mode #refreshView,
-body.viewer-mode #exportPdf {
-    display: none;
-}
-
-/* 🎯 Fixes for Toggle Buttons */
-#togglePresentation {
-    background-color: #95a5a6;
-    padding: 4px 12px;
-    border-radius: 6px;
-    align-self: flex-start;
-    margin-left: 10px;
-    cursor: pointer;
-}
-
-#togglePresentation:hover {
-    background-color: #7f8c8d;
-}
-
-/* Fix Song List Toggle */
-#songList {
-    width: 25%;
-    transition: width 0.3s ease;
-    overflow-y: auto;
-}
-
-#songList.closed {
-    width: 40px;
-}
-
-.song-list-toggle-container {
-    width: 40px;
-    flex-shrink: 0;
+.title-row {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
 }
 
-#toggleSongList {
-    width: 30px;
-    height: 30px;
-    padding: 8px;
+#songTitle, #songAuthors {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #dcdcdc;
     border-radius: 6px;
-    background-color: #95a5a6;
-    transition: transform 0.3s ease, background-color 0.2s;
+    margin-bottom: 5px;
+}
+
+.format-controls {
+    display: flex;
+    gap: 5px;
+}
+
+button {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    padding: 8px 16px;
     cursor: pointer;
+    border-radius: 6px;
 }
 
-#toggleSongList:hover {
-    background-color: #7f8c8d;
+button:hover {
+    background-color: #357abd;
 }
 
-#toggleSongList.open {
-    transform: rotate(90deg);
+#presentation {
+    padding: 15px;
+    background: #fafafa;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.song-list-toggle {
+    cursor: pointer;
+    font-size: 24px;
+    border: none;
+    background: transparent;
+}
+
+.song-list-toggle:hover {
+    color: #4a90e2;
 }
