@@ -109,9 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
         connectWebSocket(viewRoom, false);
 
         // Hide everything except the PDF preview
+        document.body.classList.add('viewer-mode');
         document.getElementById('container').style.display = 'none';
         document.getElementById('presentation').style.display = 'block';
-        document.getElementById('presentation').classList.add('viewer-mode');
     }
 });
 
