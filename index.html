@@ -5,38 +5,147 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Song Writer</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/idb-keyval@6.2.1/dist/umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
-<body>
+<body class="light-mode">
     <div class="container">
+        <button id="darkModeToggle" class="mode-toggle" title="Toggle Dark Mode">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2a1 1 0 011 1v2a1 1 0 01-2 0V3a1 1 0 011-1zm0 18a1 1 0 011 1v2a1 1 0 01-2 0v-2a1 1 0 011-1zm9.071-9.071a1 1 0 010 1.414l-1.414 1.414a1 1 0 01-1.414-1.414l1.414-1.414a1 1 0 011.414 0zm-18.142 0a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414L2.929 12.071a1 1 0 010-1.414zM19.071 5.757a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm-14.242 14.242a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zM19.071 18.243a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414zm-14.242-14.242a1 1 0 011.414 0l1.414 1.414a1 1 0 01-1.414 1.414l-1.414-1.414a1 1 0 010-1.414z"/>
+            </svg>
+        </button>
+        <button id="pickFolder">Pick Save Folder</button>
         <h1>The Song Writer</h1>
-
-        <div class="controls">
-            <input type="text" id="songTitle" placeholder="Song Title">
-            <input type="text" id="songAuthors" placeholder="Authors">
-            <button id="shareView">Share View</button>
+        <div class="title-row">
+            <div class="title-container">
+                <input type="text" id="songTitle" placeholder="Song Title">
+                <input type="text" id="songAuthors" placeholder="Authors (e.g., John Doe, Jane Smith)">
+            </div>
+            <div class="format-controls">
+                <label>Columns:</label>
+                <button class="format-button columns" data-value="single" data-selected="true">1</button>
+                <button class="format-button columns" data-value="two">2</button>
+                <label>Transpose:</label>
+                <button class="transpose-button" data-direction="+">+</button>
+                <span id="transpose-indicator">0</span>
+                <button class="transpose-button" data-direction="-">–</button>
+                <label>Font:</label>
+                <button class="format-button font" data-value="Sans" data-selected="true">Sans</button>
+                <button class="format-button font" data-value="Serif">Serif</button>
+                <button class="toggle-button bold-toggle" data-active="false">Bold Chords</button>
+                <label class="checkbox-label">
+                    <select id="fontSize">
+                        <option value="normal">Normal</option>
+                        <option value="larger">Larger</option>
+                        <option value="smaller">Smaller</option>
+                    </select> Font Size
+                </label>
+                <button id="togglePresentation">Hide</button>
+                <button id="shareView">Share View</button>
+            </div>
         </div>
-
-        <div id="songList">
-            <h2>Saved Songs</h2>
-            <ul id="songItems"></ul>
-            <button id="newSong">New Song</button>
-            <button id="exportAll">Export All</button>
-            <button id="importSongs">Import</button>
+        <div class="main-content">
+            <div id="songList">
+                <div class="song-list-toggle-container">
+                    <button id="toggleSongList" class="song-list-toggle">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+                <div class="song-list-content">
+                    <h2>Saved Songs</h2>
+                    <ul id="songItems"></ul>
+                    <button id="newSong">New Song</button>
+                    <button id="exportAll">Export All</button>
+                    <button id="importSongs">Import</button>
+                </div>
+            </div>
+            <div id="editor">
+                <div id="sections">
+                    <div class="section">
+                        <div class="section-header">
+                            <input type="text" class="section-title" placeholder="Section (e.g., Verse)">
+                            <button class="delete-section">🗑️</button>
+                        </div>
+                        <textarea class="lyrics-chords" placeholder="Lyrics / Chords"></textarea>
+                        <button class="record-btn">Record Section</button>
+                        <div class="audio-controls">
+                            <select class="audio-select"></select>
+                            <button class="delete-audio">🗑️</button>
+                        </div>
+                        <audio controls class="section-audio"></audio>
+                        <div class="move-buttons">
+                            <button class="move-up">↑</button>
+                            <button class="move-down">↓</button>
+                            <button class="toggle-button chord-recognition-toggle" data-active="true">Recognize chords</button>
+                            <span class="chords-advisory">Chords are odd-numbered lines</span>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-header">
+                            <input type="text" class="section-title" placeholder="Section (e.g., Chorus)">
+                            <button class="delete-section">🗑️</button>
+                        </div>
+                        <textarea class="lyrics-chords" placeholder="Lyrics / Chords"></textarea>
+                        <button class="record-btn">Record Section</button>
+                        <div class="audio-controls">
+                            <select class="audio-select"></select>
+                            <button class="delete-audio">🗑️</button>
+                        </div>
+                        <audio controls class="section-audio"></audio>
+                        <div class="move-buttons">
+                            <button class="move-up">↑</button>
+                            <button class="move-down">↓</button>
+                            <button class="toggle-button chord-recognition-toggle" data-active="true">Recognize chords</button>
+                            <span class="chords-advisory">Chords are odd-numbered lines</span>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <div class="section-header">
+                            <input type="text" class="section-title" placeholder="Section (e.g., Bridge)">
+                            <button class="delete-section">🗑️</button>
+                        </div>
+                        <textarea class="lyrics-chords" placeholder="Lyrics / Chords"></textarea>
+                        <button class="record-btn">Record Section</button>
+                        <div class="audio-controls">
+                            <select class="audio-select"></select>
+                            <button class="delete-audio">🗑️</button>
+                        </div>
+                        <audio controls class="section-audio"></audio>
+                        <div class="move-buttons">
+                            <button class="move-up">↑</button>
+                            <button class="move-down">↓</button>
+                            <button class="toggle-button chord-recognition-toggle" data-active="true">Recognize chords</button>
+                            <span class="chords-advisory">Chords are odd-numbered lines</span>
+                        </div>
+                    </div>
+                </div>
+                <div id="presentation" class="presentation-panel">
+                    <div id="presentation-content"></div>
+                    <button id="exportPdf">Export as PDF</button>
+                    <button id="refreshView" style="display: none;">Connected - Viewing</button>
+                    <button id="joinRoom" style="display: none;">Join Room</button>
+                </div>
+            </div>
         </div>
-
-        <div id="editor">
-            <div id="sections"></div>
-            <button id="addSection">Add Section</button>
+        <button id="addSection">Add Section</button>
+        <div class="full-song">
+            <h3>Full Song Recording</h3>
+            <button id="recordFull">Record Full Song</button>
+            <div class="audio-controls">
+                <select id="full-audio-select"></select>
+                <button id="delete-full-audio">🗑️</button>
+            </div>
+            <audio controls id="fullAudio"></audio>
         </div>
-
-        <div id="presentation">
-            <h2>Live Preview</h2>
-            <div id="previewContent"></div>
-            <button id="exportPdf">Export as PDF</button>
-        </div>
+        <button id="saveSong">Save Song</button>
     </div>
-
-    <script src="/socket.io/socket.io.js"></script>
+    <div id="viewer-container" style="display: none;">
+        <div id="viewer-content"></div>
+        <button id="viewer-join" style="margin: 10px;">Join Room</button>
+        <span id="viewer-status" style="margin-left: 10px;"></span>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
