@@ -1,42 +1,33 @@
-body {
-    font-family: Arial, sans-serif;
-    background: #f0f2f5;
-    color: #2c3e50;
+body.light-mode {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(to bottom, #f0f2f5, #dfe4ea);
     margin: 0;
     padding: 20px;
+    color: #2c3e50;
+    transition: background 0.3s, color 0.3s;
+}
+
+body.dark-mode {
+    background: linear-gradient(to bottom, #2c2c2c, #3c3c3c);
+    color: #ffffff;
 }
 
 .container {
     max-width: 1200px;
     margin: auto;
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
+body.dark-mode .container {
+    background: rgba(44, 44, 44, 0.9);
+}
+
 h1 {
     text-align: center;
     font-family: Georgia, serif;
-}
-
-.title-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
-
-#songTitle, #songAuthors {
-    width: 100%;
-    padding: 10px;
-    border: 2px solid #dcdcdc;
-    border-radius: 6px;
-    margin-bottom: 5px;
-}
-
-.format-controls {
-    display: flex;
-    gap: 5px;
 }
 
 button {
@@ -68,4 +59,43 @@ button:hover {
 
 .song-list-toggle:hover {
     color: #4a90e2;
+}
+
+#songList {
+    width: 25%;
+    transition: width 0.3s ease;
+    overflow-y: auto;
+}
+
+#songList.closed {
+    width: 40px;
+}
+
+.song-list-content {
+    transition: opacity 0.3s ease;
+}
+
+#songList.closed .song-list-content {
+    opacity: 0;
+}
+
+#togglePresentation {
+    background-color: #95a5a6;
+    padding: 4px 12px;
+    border-radius: 6px;
+    align-self: flex-start;
+}
+
+#togglePresentation:hover {
+    background-color: #7f8c8d;
+}
+
+#shareView {
+    background-color: #2ecc71;
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+
+#shareView:hover {
+    background-color: #27ae60;
 }
