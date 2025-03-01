@@ -13,7 +13,6 @@
         <button id="darkModeToggle" class="mode-toggle" title="Toggle Dark Mode">🌙</button>
         <button id="pickFolder">Pick Save Folder</button>
         <h1>The Song Writer</h1>
-        
         <div class="title-row">
             <div class="title-container">
                 <input type="text" id="songTitle" placeholder="Song Title">
@@ -21,9 +20,9 @@
             </div>
             <div class="format-controls">
                 <button id="togglePresentation">Hide</button>
+                <button id="shareView">Share View</button>
             </div>
         </div>
-
         <div class="main-content">
             <div id="songList">
                 <button id="toggleSongList" class="song-list-toggle">☰</button>
@@ -35,21 +34,17 @@
                     <button id="importSongs">Import</button>
                 </div>
             </div>
-
             <div id="editor">
                 <div id="sections"></div>
                 <button id="addSection">Add Section</button>
             </div>
-
             <div id="presentation" class="presentation-panel">
                 <div id="presentation-content"></div>
                 <button id="exportPdf">Export as PDF</button>
             </div>
         </div>
-
         <button id="saveSong">Save Song</button>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="script.js"></script>
 </body>
