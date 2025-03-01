@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body class="light-mode">
-    <div class="container" id="container">
+    <div class="container">
         <button id="darkModeToggle" class="mode-toggle" title="Toggle Dark Mode">🌙</button>
         <button id="pickFolder">Pick Save Folder</button>
         <h1>The Song Writer</h1>
@@ -20,19 +20,7 @@
                 <input type="text" id="songAuthors" placeholder="Authors (e.g., John Doe, Jane Smith)">
             </div>
             <div class="format-controls">
-                <label>Font:</label>
-                <button class="format-button font" data-value="Sans" data-selected="true">Sans</button>
-                <button class="format-button font" data-value="Serif">Serif</button>
-                <button class="toggle-button bold-toggle" data-active="false">Bold Chords</button>
-                <label class="checkbox-label">
-                    <select id="fontSize">
-                        <option value="normal">Normal</option>
-                        <option value="larger">Larger</option>
-                        <option value="smaller">Smaller</option>
-                    </select> Font Size
-                </label>
                 <button id="togglePresentation">Hide</button>
-                <button id="shareView">Share View</button>
             </div>
         </div>
 
